@@ -281,6 +281,56 @@ async function generatePO(){
     return;
   }
 
+  // 🔥 Open tab immediately (popup safe)
+  const pdfTab = window.open("", "_blank");
+
+  if(!pdfTab){
+    alert("Popup blocked. Please allow popups for this site.");
+    return;
+  }
+
+  // 🔥 Loader UI inside new tab
+  pdfTab.document.write(`
+    <html>
+      <head>
+        <title>Generating PO</title>
+        <style>
+          body{
+            margin:0;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            height:100vh;
+            font-family: Inter, Arial, sans-serif;
+            background:#f4f6f9;
+            flex-direction:column;
+          }
+          .spinner{
+            width:60px;
+            height:60px;
+            border:6px solid #e0e0e0;
+            border-top:6px solid #2f80ed;
+            border-radius:50%;
+            animation:spin 1s linear infinite;
+            margin-bottom:20px;
+          }
+          @keyframes spin{
+            0%{ transform:rotate(0deg); }
+            100%{ transform:rotate(360deg); }
+          }
+          h2{
+            font-weight:600;
+            color:#333;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="spinner"></div>
+        <h2>Generating PO. Please Wait...</h2>
+      </body>
+    </html>
+  `);
+
   document.querySelector(".primary-btn").disabled = true;
   showLoader();
 
@@ -321,35 +371,27 @@ async function generatePO(){
       body: formData
     });
 
-    const text = await res.text();
-    console.log("SERVER RESPONSE:", text);
-
-    let result;
-    try{
-      result = JSON.parse(text);
-    }catch(e){
-      throw new Error("Invalid JSON returned from server");
-    }
+    const result = await res.json();
 
     if(!result.success){
-      throw new Error(result.error || "Save failed on server");
+      throw new Error(result.error || "Save failed");
     }
 
-    if(!result.pdfUrl){
-      throw new Error("PDF URL missing from server response");
-    }
+    // 🔥 Load real PDF after generation
+    pdfTab.location.href = result.pdfUrl;
 
-    // 🔥 Open tab AFTER PDF is ready
-    window.open(result.pdfUrl, "_blank");
-
-    setTimeout(()=>location.reload(),1000);
+    setTimeout(() => {window.location.reload();}, 2000);
 
   }catch(err){
-    console.error("REAL ERROR:", err);
+
+    pdfTab.close();
     alert("Error: " + err.message);
+
   }finally{
+
     hideLoader();
     document.querySelector(".primary-btn").disabled = false;
+
   }
 }
 
