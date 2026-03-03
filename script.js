@@ -152,7 +152,7 @@ function addItem() {
       <option value="NOS">NOS</option>
       <option value="KG">KG</option>
       <option value="SET">SET</option>
-      <option value="NO">NO</option>
+      <option value="PKT">PKT</option>
       <option value="LTR">LTR</option>
     </select>
 
@@ -565,3 +565,4 @@ async function checkSheetUpdate(){
 }
 
 setInterval(checkSheetUpdate, 15000); // every 15 sec
+
