@@ -4,6 +4,9 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwhzuzE0DCAhEQEjKhwo
 let itemMasterList = [];
 let vendorMasterList = [];
 let selectedVendor = "";
+let editMode = false;
+let editingPO = "";
+let editingRow = null;
 
 const loader = document.getElementById("loader");
 
@@ -12,7 +15,7 @@ function showLoader(){
 }
 
 function hideLoader(){
-  loader.classList.add("hidden");
+  loader.classList.add("hidden"); 
 }
 function formatINR(num){
   return Number(num).toLocaleString("en-IN", {
@@ -70,27 +73,19 @@ window.onload = async () => {
 
   try {
 
-    /* ===== PO NUMBER ===== */
+    // 🔥 ONE API CALL
+    const res = await fetch(`${SCRIPT_URL}?action=getAllData`);
+    const data = await res.json();
+
+    vendorMasterList = data.partyList || [];
+    itemMasterList   = data.itemList || [];
+    window.poListData = data.poList || []; // cache
+
+    // 🔥 PO NUMBER
     const poRes = await fetch(`${SCRIPT_URL}?action=getPONumber`);
     const poData = await poRes.json();
-    poNumberEl.textContent = poData?.po || "PO-001/2025-26";
+    poNumberEl.textContent = poData?.po || "PO-001";
 
-
-    /* ===== PARTY LIST ===== */
-    const partyRes = await fetch(`${SCRIPT_URL}?action=partyList`);
-    const list = await partyRes.json();
-
-    vendorMasterList = Array.isArray(list) ? list : [];
-
-
-    /* ===== ITEM MASTER LIST ===== */
-    const itemRes = await fetch(`${SCRIPT_URL}?action=itemList`);
-    const items = await itemRes.json();
-
-    itemMasterList = Array.isArray(items) ? items : [];
-
-
-    /* ===== ADD FIRST ITEM ROW ===== */
     addItem();
 
   } catch (err) {
@@ -109,16 +104,10 @@ const partySearch = document.getElementById("partySearch");
 const vendorSuggestions = document.getElementById("vendorSuggestions");
 
 
-
-document.addEventListener("click", (e) => {
-  if (!e.target.closest(".vendor-container")) {
-    vendorSuggestions.classList.add("hidden");
-  }
-});
-
 function clearVendorDetails(){
 
   selectedVendor = "";
+  paymentTerms = "NA";
 
   building.value = "";
   street.value   = "";
@@ -127,6 +116,7 @@ function clearVendorDetails(){
   phone.value    = "";
   gst.value      = "";
 
+  partySearch.value = "";
 }
 
 
@@ -152,7 +142,7 @@ function addItem() {
       <option value="NOS">NOS</option>
       <option value="KG">KG</option>
       <option value="SET">SET</option>
-      <option value="PKT">PKT</option>
+      <option value="NO">NO</option>
       <option value="LTR">LTR</option>
     </select>
 
@@ -167,21 +157,54 @@ function addItem() {
   const itemInput = row.querySelector(".item-name");
   const suggestionBox = row.querySelector(".item-suggestions");
   const rateInput = row.querySelector(".rate");
-  const noteInput = row.querySelector(".item-note");
 
-  // 🔥 TYPE FILTER
+  // ================= CLICK → SHOW ALL ITEMS =================
+  itemInput.addEventListener("click", (e) => {
+
+    e.stopPropagation();
+
+    if(!selectedVendor){
+      alert("Please select vendor first");
+      return;
+    }
+
+    renderItems("");
+
+  });
+
+  // ================= TYPE → FILTER =================
   itemInput.addEventListener("input", () => {
 
     const val = itemInput.value.toLowerCase();
-    suggestionBox.innerHTML = "";
+
+    // 🔥 clear rate if not exact match
+    const exactItem = itemMasterList.find(i =>
+      i.name.toLowerCase() === val &&
+      i.vendor.toLowerCase() === selectedVendor.toLowerCase()
+    );
+
+    if(!exactItem){
+      rateInput.value = "";
+      calc();
+    }
 
     if(!val){
       suggestionBox.classList.add("hidden");
       return;
     }
 
+    renderItems(val);
+
+  });
+
+  // ================= COMMON RENDER FUNCTION =================
+  function renderItems(searchText){
+
+    suggestionBox.innerHTML = "";
+
     const filtered = itemMasterList.filter(i =>
-      i.toLowerCase().includes(val)
+      i.vendor.toLowerCase() === selectedVendor.toLowerCase() &&
+      (!searchText || i.name.toLowerCase().includes(searchText))
     );
 
     if(filtered.length === 0){
@@ -189,44 +212,51 @@ function addItem() {
       return;
     }
 
-    filtered.forEach(name => {
+    filtered.forEach(item => {
 
       const div = document.createElement("div");
       div.className = "suggestion-item";
-      div.textContent = name;
+      div.textContent = item.name;
 
-      div.onclick = () => {
-        itemInput.value = name;
+      div.addEventListener("click", (e) => {
+
+        e.stopPropagation();
+
+        itemInput.value = item.name;
         suggestionBox.classList.add("hidden");
 
-        // 🔥 AUTO FILL DETAILS
-        fetch(`${SCRIPT_URL}?action=itemDetails&name=${encodeURIComponent(name)}`)
-          .then(r => r.json())
-          .then(data => {
+        rateInput.value = item.rate || "";
 
-            if(data.rate) rateInput.value = data.rate;
-
-            calc();
-          });
-
-      };
+        calc();
+      });
 
       suggestionBox.appendChild(div);
     });
 
     suggestionBox.classList.remove("hidden");
-
-  });
-
-  // Outside click hide
-  document.addEventListener("click", (e)=>{
-    if(!e.target.closest(".item-container")){
-      suggestionBox.classList.add("hidden");
-    }
-  });
-
+  }
 }
 
+function clearItems(){
+      document.querySelectorAll(".item-row").forEach(row => {
+        row.querySelector(".item-name").value = "";
+        row.querySelector(".rate").value = "";
+        row.querySelector(".amount").value = "";
+      });
+      calc();
+    }
+
+document.addEventListener("click", (e) => { 
+
+  if (!e.target.closest(".item-container")) {
+
+    document.querySelectorAll(".item-suggestions").forEach(box => {
+      box.classList.add("hidden");
+    });
+
+  }
+
+});
 
 
 function removeItem(btn) {
@@ -336,8 +366,10 @@ async function generatePO(){
 
   try{
 
+
     const payload = {
-      po: poNumberEl.textContent,
+      row: editMode && editingRow ? Number(editingRow) : "",
+      po: editMode ? editingPO : poNumberEl.textContent,  // ✅ FIXED
       party: selectedVendor,
       date: poDateText.textContent,
       vendorName: selectedVendor,
@@ -353,6 +385,7 @@ async function generatePO(){
       gstRate: document.getElementById("gstRate").value,
       total: totalEl.textContent,
       commonNote: document.getElementById("commonNote").value,
+
       items: Array.from(rows).map(r => ({
         name: r.querySelector(".item-name").value.trim(),
         note: r.querySelector(".item-note").value.trim(),
@@ -377,14 +410,30 @@ async function generatePO(){
       throw new Error(result.error || "Save failed");
     }
 
-    // 🔥 Load real PDF after generation
-    pdfTab.location.href = result.pdfUrl;
+    // 🔥 PDF open
+    await openPDFWithRetry(result.pdfUrl, pdfTab);
 
-    setTimeout(() => {window.location.reload();}, 2000);
+    // 🔥 reset edit mode
+    editMode = false;
+    editingPO = "";
+
+    // 🔥 reload
+    setTimeout(() => {
+      if(pdfTab && !pdfTab.closed){
+        window.location.reload();
+      }
+    }, 3000);
+
+    const btn = document.getElementById("saveBtn");
+    btn.textContent = "Generate & Save";
+    btn.style.background = "";
 
   }catch(err){
 
-    pdfTab.close();
+    if(pdfTab && !pdfTab.closed){
+      pdfTab.close();
+    }
+
     alert("Error: " + err.message);
 
   }finally{
@@ -393,6 +442,31 @@ async function generatePO(){
     document.querySelector(".primary-btn").disabled = false;
 
   }
+}
+
+async function openPDFWithRetry(url, tab){
+
+  let attempts = 0;
+  const maxAttempts = 10;
+
+  while(attempts < maxAttempts){
+
+    try{
+      const res = await fetch(url, { method: "HEAD" });
+
+      if(res.ok){
+        tab.location.href = url;
+        return;
+      }
+
+    }catch(e){}
+
+    await new Promise(r => setTimeout(r, 800));
+    attempts++;
+  }
+
+  // fallback (force open)
+  tab.location.href = url;
 }
 
 
@@ -404,10 +478,19 @@ function closeVendorModal(){
   document.getElementById("vendorModal").classList.add("hidden");
 }
 
+function showVendorLoader(){
+  document.getElementById("vendorLoader").classList.remove("hidden");
+}
+
+function hideVendorLoader(){
+  document.getElementById("vendorLoader").classList.add("hidden");
+}
+
 function saveVendor(){
 
   const vendor = {
     name: v_name.value,
+    person: v_person.value,
     building: v_building.value,
     street: v_street.value,
     state: v_state.value,
@@ -416,6 +499,8 @@ function saveVendor(){
     gst: v_gst.value,
     terms: v_terms.value
   };
+
+  showVendorLoader();
 
   fetch(SCRIPT_URL, {
     method:"POST",
@@ -429,16 +514,22 @@ function saveVendor(){
   .then(r=>r.json())
   .then(res=>{
     if(res.success){
-      alert("Vendor Added");
       location.reload();
     }else{
       alert("Failed");
     }
+  })
+  .catch(err=>{
+    alert("Error saving vendor");
+    console.error(err);
+  })
+  .finally(()=>{
+    hideVendorLoader();
   });
 }
 
-// ================= VENDOR SEARCH =================
 
+// ================= SMART SEARCH =================
 
 function renderVendorList(arr){
 
@@ -449,19 +540,36 @@ function renderVendorList(arr){
     return;
   }
 
-  arr.forEach(name => {
+  arr.forEach(obj => {
 
     const div = document.createElement("div");
     div.className = "suggestion-item";
-    div.textContent = name;
+
+    // Show both vendor + person in dropdown
+    div.textContent = obj.person 
+      ? `${obj.vendor} (${obj.person})`
+      : obj.vendor;
 
     div.onclick = () => {
 
-      partySearch.value = name;
-      selectedVendor = name;
+      // normalize vendor
+      selectedVendor = (obj.vendor || "").toString().trim();
+
+      partySearch.value = selectedVendor;
+
       vendorSuggestions.classList.add("hidden");
 
-      loadVendorDetails(name);
+      // 🔥 ALWAYS fill from object (no dependency)
+      building.value = obj.building || "";
+      street.value   = obj.street || "";
+      state.value    = obj.state || "";
+      pin.value      = obj.pin || "";
+      phone.value    = obj.phone || "";
+      gst.value      = obj.gst || "";
+
+      paymentTerms = obj.terms || "NA";
+
+      clearItems(); // important
 
     };
 
@@ -473,71 +581,37 @@ function renderVendorList(arr){
 
 
 // CLICK → SHOW ALL
+partySearch.addEventListener("click", (e) => {
+  e.stopPropagation();   // 🔥 important
+  renderVendorList(vendorMasterList);
+});
+
 partySearch.addEventListener("focus", () => {
   renderVendorList(vendorMasterList);
 });
 
 
-// TYPE → FILTER
+
+// TYPE → SEARCH BOTH
 partySearch.addEventListener("input", () => {
 
-  const currentValue = partySearch.value.trim();
+  const value = partySearch.value.trim().toLowerCase();
 
-  // Agar user ne selected vendor ko modify ya delete kiya
-  if(currentValue !== selectedVendor){
+  if(!value){
     clearVendorDetails();
+    return;
   }
 
   const filtered = vendorMasterList.filter(v =>
-    v.toLowerCase().includes(currentValue.toLowerCase())
+    (v.vendor && v.vendor.toLowerCase().includes(value)) ||
+    (v.person && v.person.toLowerCase().includes(value))
   );
 
   renderVendorList(filtered);
 
 });
 
-
-
-// OUTSIDE CLICK CLOSE
-document.addEventListener("click", (e) => {
-  if (!e.target.closest(".vendor-container")) {
-    vendorSuggestions.classList.add("hidden");
-  }
-});
-
-
 let vendorLoading = false;
-
-async function loadVendorDetails(name){
-
-  vendorLoading = true;
-
-  try{
-
-    const r = await fetch(`${SCRIPT_URL}?action=partyDetails&name=${encodeURIComponent(name)}`);
-    const d = await r.json();
-
-    if(!d || !d.building){
-      alert("Vendor not found");
-      return;
-    }
-
-    building.value = d.building || "";
-    street.value   = d.street   || "";
-    state.value    = d.state    || "";
-    pin.value      = d.pin      || "";
-    phone.value    = d.phone    || "";
-    gst.value      = d.gst      || "";
-
-    paymentTerms = d.terms || "NA";
-
-    selectedVendor = name;  // 🔥 SET AFTER LOAD
-
-  }finally{
-    vendorLoading = false;
-  }
-}
-
 
 function refreshPage(){
   location.reload();
@@ -566,3 +640,283 @@ async function checkSheetUpdate(){
 
 setInterval(checkSheetUpdate, 15000); // every 15 sec
 
+function showList(btn){
+  if(btn) setActiveTab(btn);
+
+  document.querySelectorAll(".form-section").forEach(el=>{
+    el.style.display="none";
+  });
+
+  document.querySelector(".po-footer").style.display="none";
+
+  document.getElementById("poListSection").classList.remove("hidden");
+
+  loadPOList();
+}
+
+function showCreate(btn){
+  if(btn) setActiveTab(btn);
+
+  document.querySelectorAll(".form-section").forEach(el=>{
+    el.style.display="block";
+  });
+
+  document.querySelector(".po-footer").style.display="block";
+
+  document.getElementById("poListSection").classList.add("hidden");
+}
+
+function loadPOList(){
+
+  const data = window.poListData || [];
+
+  const body = document.getElementById("poTableBody");
+  body.innerHTML = "";
+
+  data.forEach(r => {
+
+    body.innerHTML += `
+      <tr>
+        <td>${r.po}</td>
+        <td>${formatDateDMY(r.date)}</td>
+        <td>${r.party}</td>
+        <td>₹ ${formatINR(r.total)}</td>
+        <td>
+          <span class="action-btn" title="View PDF" onclick="viewPDF('${r.po}')">👁️</span>
+          <span class="action-btn" onclick="openEdit('${r.po}')">✏️</span>
+          <span class="action-btn" onclick="deletePO('${r.po}')">🗑️</span>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+function viewPDF(po){
+
+  const data = (window.poListData || []).find(p => p.po === po);
+
+  if(!data){
+    alert("PO not found");
+    return;
+  }
+
+  if(!data.pdf){
+    alert("PDF not available");
+    return;
+  }
+
+  window.open(data.pdf, "_blank");
+}
+
+async function deletePO(po){
+
+  if(!confirm("Delete PO?")) return;
+
+  const res = await fetch(SCRIPT_URL,{
+    method:"POST",
+    body:new URLSearchParams({
+      action:"deletePO",
+      po:po
+    })
+  });
+
+  const data = await res.json();
+
+  if(!data.success){
+    alert("Delete failed");
+  }
+
+  loadPOList();
+}
+
+let currentPO = "";
+
+async function openEdit(po){
+
+  editMode = true;
+  editingPO = po;
+
+  showCreate();
+  showLoader();
+
+  try{
+
+    // 🔥 GET FROM CACHE (NO API CALL)
+    const data = (window.poListData || []).find(p => p.po === po);
+
+    if(!data){
+      alert("PO not found");
+      return;
+    }
+
+    // 🔥 FIND ROW (important for update)
+    const index = (window.poListData || []).findIndex(p => p.po === po);
+    editingRow = index >= 0 ? index + 2 : 0; // +2 because header + 0 index
+
+    // ================= BASIC =================
+    poNumberEl.textContent = po;
+    document.getElementById("commonNote").value = data.note || "";
+    document.getElementById("gstRate").value = data.sub 
+      ? (data.gst / data.sub) 
+      : "0.18";
+
+    // ================= VENDOR =================
+    selectedVendor = data.party;
+    partySearch.value = data.party;
+
+    // 🔥 vendor details from master list
+    const vendorObj = (vendorMasterList || []).find(v => v.vendor === data.party);
+
+    building.value = vendorObj?.building || "";
+    street.value   = vendorObj?.street || "";
+    state.value    = vendorObj?.state || "";
+    pin.value      = vendorObj?.pin || "";
+    phone.value    = vendorObj?.phone || "";
+    gst.value      = vendorObj?.gst || "";
+
+    paymentTerms = vendorObj?.terms || "NA";
+
+    // ================= ITEMS =================
+    document.getElementById("items").innerHTML = "";
+
+    const items = JSON.parse(data.items || "[]");
+
+    items.forEach(it => {
+
+      addItem();
+
+      const rows = document.querySelectorAll(".item-row");
+      const last = rows[rows.length - 1];
+
+      last.querySelector(".item-name").value = it.name;
+      last.querySelector(".item-note").value = it.note || "";
+      last.querySelector(".qty").value  = it.qty;
+      last.querySelector(".rate").value = it.rate;
+
+    });
+
+    calc();
+
+  }catch(err){
+    alert("Edit load failed");
+    console.error(err);
+  }finally{
+    hideLoader();
+  }
+
+  const btn = document.getElementById("saveBtn");
+  btn.textContent = "Update";
+  btn.style.background = "#22c55e";
+}
+
+function closeEdit(){
+  const modal = document.getElementById("editModal");
+  modal.classList.add("hidden");
+  modal.style.display = "none";
+}
+
+async function updatePO(){
+
+  const note = document.getElementById("editNote").value;
+  const gst  = document.getElementById("editGst").value;
+
+  const items = [];
+
+  document.querySelectorAll("#editItems .item-row").forEach(r => {
+    items.push({
+      name: r.querySelector(".e-name").value,
+      qty: r.querySelector(".e-qty").value,
+      rate: r.querySelector(".e-rate").value
+    });
+  });
+
+  const res = await fetch(SCRIPT_URL,{
+    method:"POST",
+    body:new URLSearchParams({
+      action:"updatePO",
+      po:currentPO,
+      note:note,
+      gst:gst,
+      items: JSON.stringify(items)
+    })
+  });
+
+  const data = await res.json();
+
+  if(!data.success){
+    alert("Update failed");
+    return;
+  }
+
+  closeEdit();
+  loadPOList();
+}
+
+function renderEditItems(items){
+
+  const box = document.getElementById("editItems");
+  box.innerHTML = "";
+
+  items.forEach(i => {
+
+    box.innerHTML += `
+      <div class="item-row">
+        <input class="e-name" value="${i.name}">
+        <input class="e-qty" type="number" value="${i.qty}" oninput="calcEdit()">
+        <input class="e-rate" type="number" value="${i.rate}" oninput="calcEdit()">
+        <input class="e-amt" readonly>
+      </div>
+    `;
+  });
+
+  calcEdit();
+}
+
+function calcEdit(){
+
+  let sub = 0;
+
+  document.querySelectorAll("#editItems .item-row").forEach(r => {
+
+    const qty  = Number(r.querySelector(".e-qty").value || 0);
+    const rate = Number(r.querySelector(".e-rate").value || 0);
+
+    const amt = qty * rate;
+    r.querySelector(".e-amt").value = formatINR(amt);
+
+    sub += amt;
+  });
+
+  const gstRate = Number(document.getElementById("editGst").value);
+  const total = sub + (sub * gstRate);
+
+  document.getElementById("editTotal").textContent = formatINR(total);
+}
+
+function formatDateDMY(dateStr){
+
+  if(!dateStr) return "";
+
+  // 🔥 ISO format handle (2026-04-02T18:30:00.000Z)
+  if(dateStr.includes("T")){
+    const d = new Date(dateStr);
+    const dd = String(d.getDate()).padStart(2,"0");
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const yy = d.getFullYear();
+    return `${dd}/${mm}/${yy}`;
+  }
+
+  // 🔥 YYYY-MM-DD
+  if(dateStr.includes("-")){
+    const parts = dateStr.split("-");
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+
+  // 🔥 fallback
+  return dateStr;
+}
+
+function setActiveTab(btn){
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+}
