@@ -1,201 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PODesk</title>
-  <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="icon" type="image/png" href="Fevicon.png">
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PODesk | Shanaya Motor</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="favicon.png">
 </head>
 <body>
 
-  <div id="loader" class="loader hidden">
-    <div class="spinner"></div>
-    <div class="loader-text">Processing...</div>
-  </div>
-  
- <div class="app-wrapper">
-  <div class="glass-container">
-    <header class="po-header">
-      <div class="title-group">
-        <h1>Purchase Order</h1>
-
-        <div class="po-meta">
-          <span class="badge" id="po-number">PO----</span>
-
-          <div class="date-badge" onclick="openDatePicker()">
-            <span id="po-date-text">-- -- ----</span>
-            <input type="date" id="po-date" hidden onchange="updateDate(this.value)">
-          </div>
-        </div>
-      </div>
-      <button class="refresh-btn" onclick="refreshPage()">🔄 Refresh</button>
-    </header>
-    
-
-    <section class="form-section">
-      <div class="section-title">
-        <span class="step">1</span>
-        <h3>Vendor Information</h3>
-      </div>
-      
-      <div class="party-box">
-        <div class="main-select">
-          <label>Select Company/Vendor</label>
-          <div class="vendor-container" style="position:relative;">
-  <input type="text"
-         id="partySearch"
-         class="styled-select"
-         placeholder="Search Vendor..."
-         autocomplete="off">
-
-  <div id="vendorSuggestions"
-       class="item-suggestions hidden"></div>
- </div>
-
-
-
-        </div>
-        <button class="add-vendor-btn" onclick="openVendorModal()">+ Add Vendor</button>
-
-        <div class="info-grid">
-          <div class="field"><span>Building</span><input id="building" readonly></div>
-          <div class="field"><span>Street</span><input id="street" readonly></div>
-          <div class="field"><span>State</span><input id="state" readonly></div>
-          <div class="field"><span>PIN</span><input id="pin" readonly></div>
-          <div class="field"><span>Phone</span><input id="phone" readonly></div>
-          <div class="field"><span>GSTIN</span><input id="gst" class="gst-highlight" readonly></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="form-section">
-      <div class="section-title">
-        <span class="step">2</span>
-        <h3>Item Catalog</h3>
-      </div>
-
-      <div class="table-container">
-        <div class="table-head">
-          <div>Item Description</div>
-          <div>Qty</div>
-          <div>Unit</div>
-          <div>Rate</div>
-          <div>Amount</div>
-          <div></div>
-        </div>
-
-        <div id="items" class="items-list">
-          </div>
-
-        <button class="add-row-btn" onclick="addItem()">+ Add Line Item</button>
-      </div>
-    </section>
-
-    <section class="form-section">
-
-      <div class="section-title">
-        <span class="step">3</span>
-        <h3>Common Note</h3>
-      </div>
-
-      <textarea id="commonNote" placeholder="Enter PO note (delivery, packing, etc...)"></textarea>
-    </section>
-
-
-    <footer class="po-footer">
-      <div class="summary-card">
-        <div class="summary-row">
-          <span>Sub-Total</span>
-          <span>₹ <span id="sub-total">0.00</span></span>
-        </div>
-        <div class="summary-row">
-          <span>
-            GST
-            <select id="gstRate" onchange="calc()" style="margin-left:6px;padding:3px;border-radius:6px">
-              <option value="0.05">5%</option>
-              <option value="0.18" selected>18%</option>
-              <option value="0.28">28%</option>
-            </select>
-          </span>
-
-          <span>₹ <span id="gst-amt">0.00</span></span>
-        </div>
-
-        <div class="summary-row total-row">
-          <span>Grand Total</span>
-          <span class="final-amt">₹ <span id="total">0.00</span></span>
-        </div>
-      </div>
-      <div class="save-btn-wrap">
-        <button class="primary-btn" onclick="generatePO()">Generate & Save</button>
-      </div>
-    </footer>
-  </div>
- </div>
-
- <div id="vendorModal" class="vendor-modal hidden">
-  <div class="vendor-card">
-
-    <div class="vendor-header">
-      <h3>Add Vendor</h3>
-      <button class="vendor-close" onclick="closeVendorModal()">✕</button>
+    <div id="loader" class="loader hidden">
+        <div class="spinner"></div>
+        <div class="loader-text" style="color:white; font-weight:bold;">Processing...</div>
     </div>
 
-    <div class="vendor-grid">
-      <div>
-        <label>Vendor Name</label>
-        <input id="v_name">
-      </div>
+    <div class="app-wrapper">
+        <div class="glass-container">
+            <div class="top-nav">
+                <button class="nav-btn active" onclick="showCreate(this)">📄 Create</button>
+                <button class="nav-btn" onclick="showList(this)">📊 Records</button>
+            </div>
 
-      <div>
-        <label>Building No.</label>
-        <input id="v_building">
-      </div>
+            <header class="po-header">
+                <div class="title-group">
+                    <h1>Purchase Order</h1>
+                    <div class="po-meta">
+                        <span class="badge" id="po-number">PO-Loading...</span>
+                        <div class="date-badge" onclick="openDatePicker()">
+                            <span id="po-date-text">-- -- ----</span>
+                            <input type="date" id="po-date" hidden onchange="updateDate(this.value)">
+                        </div>
+                    </div>
+                </div>
+                <button class="refresh-btn" onclick="refreshPage()">🔄 Refresh</button>
+            </header>
 
-      <div>
-        <label>Street Address</label>
-        <input id="v_street">
-      </div>
+            <section class="form-section">
+                <div class="section-title">
+                    <span class="step">1</span>
+                    <h3>Vendor Information</h3>
+                </div>
+                <div class="party-box">
+                    <div class="vendor-container">
+                        <span style="font-size: 11px; font-weight: 800; color: var(--text-muted);">SELECT VENDOR</span>
+                        <input type="text" id="partySearch" placeholder="Search by Vendor or Person Name..." autocomplete="off">
+                        <div id="vendorSuggestions" class="item-suggestions hidden"></div>
+                    </div>
+                    
+                    <div class="info-grid">
+                        <div class="field"><span>Building</span><input id="building" readonly></div>
+                        <div class="field"><span>Street</span><input id="street" readonly></div>
+                        <div class="field"><span>State</span><input id="state" readonly></div>
+                        <div class="field"><span>PIN</span><input id="pin" readonly></div>
+                        <div class="field"><span>Phone</span><input id="phone" readonly></div>
+                        <div class="field"><span>GSTIN</span><input id="gst" class="gst-highlight" readonly></div>
+                    </div>
+                    <button class="add-vendor-btn" onclick="openVendorModal()">+ Add New Vendor to Master</button>
+                </div>
+            </section>
 
-      <div>
-        <label>State</label>
-        <input id="v_state">
-      </div>
+            <section class="form-section">
+                <div class="section-title">
+                    <span class="step">2</span>
+                    <h3>Item Catalog</h3>
+                </div>
+                <div class="table-container">
+                    <div class="table-head">
+                        <div>Item Description</div>
+                        <div>Qty</div>
+                        <div>Unit</div>
+                        <div>Rate</div>
+                        <div>Amount</div>
+                        <div></div>
+                    </div>
+                    <div id="items" class="items-list">
+                        </div>
+                    <button class="add-row-btn" onclick="addItem()">+ Add Line Item</button>
+                </div>
+            </section>
 
-      <div>
-        <label>Pin Code</label>
-        <input id="v_pin">
-      </div>
+            <section class="form-section">
+                <div class="section-title">
+                    <span class="step">3</span>
+                    <h3>Internal Note</h3>
+                </div>
+                <textarea id="commonNote" rows="3" placeholder="Enter delivery terms, packing instructions etc..."></textarea>
+            </section>
 
-      <div>
-        <label>Phone Number</label>
-        <input id="v_phone">
-      </div>
+            <footer class="po-footer">
+                <div class="summary-card">
+                    <div class="summary-row">
+                        <span>Sub-Total</span>
+                        <span>₹ <span id="sub-total">0.00</span></span>
+                    </div>
+                    <div class="summary-row">
+                        <span>GST 
+                            <select id="gstRate" onchange="calc()" style="width: auto; padding: 2px; margin-left: 5px;">
+                                <option value="0.00">0%</option>
+                                <option value="0.05">5%</option>
+                                <option value="0.18" selected>18%</option>
+                                <option value="0.28">28%</option>
+                            </select>
+                        </span>
+                        <span>₹ <span id="gst-amt">0.00</span></span>
+                    </div>
+                    <div class="summary-row total-row">
+                        <span>Grand Total</span>
+                        <span class="final-amt">₹ <span id="total">0.00</span></span>
+                    </div>
+                </div>
+                <div class="save-btn-wrap">
+                    <button id="saveBtn" class="primary-btn" onclick="generatePO()">Generate & Save PO</button>
+                </div>
+            </footer>
 
-      <div>
-        <label>GSTIN</label>
-        <input id="v_gst">
-      </div>
-
-      <div>
-        <label>Payment Terms</label>
-        <input id="v_terms">
-      </div>
+            <div id="poListSection" class="hidden">
+                <h2 style="margin: 20px 0;">Transaction History</h2>
+                <div style="overflow-x: auto;">
+                    <table class="po-table">
+                        <thead>
+                            <tr>
+                                <th>PO Number</th>
+                                <th>Date</th>
+                                <th>Vendor</th>
+                                <th>Total Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="poTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="vendor-actions">
-      <button class="primary-btn" onclick="saveVendor()">Save Vendor</button>
-      <button class="add-row-btn" onclick="closeVendorModal()">Cancel</button>
+    <div id="vendorModal" class="vendor-modal hidden">
+        <div class="vendor-card">
+            <div id="vendorLoader" class="loader hidden" style="position: absolute; border-radius: 20px;">
+                <div class="spinner"></div>
+                <div class="loader-text" style="color:white;">Saving Vendor...</div>
+            </div>
+            <div class="vendor-header">
+                <h3>Add Vendor</h3>
+                <button class="del-btn" style="background:#eee; color:#333; width:30px; height:30px;" onclick="closeVendorModal()">✕</button>
+            </div>
+            <div class="vendor-grid">
+                <div class="field"><span>Vendor Name</span><input id="v_name"></div>
+                <div class="field"><span>Person Name</span><input id="v_person"></div>
+                <div class="field"><span>Building No.</span><input id="v_building"></div>
+                <div class="field"><span>Street Address</span><input id="v_street"></div>
+                <div class="field"><span>State</span><input id="v_state"></div>
+                <div class="field"><span>Pin Code</span><input id="v_pin"></div>
+                <div class="field"><span>Phone</span><input id="v_phone"></div>
+                <div class="field"><span>GSTIN</span><input id="v_gst"></div>
+                <div class="field"><span>Payment Terms</span><input id="v_terms"></div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="primary-btn" onclick="saveVendor()">Save Vendor</button>
+                <button class="add-row-btn" style="margin:0;" onclick="closeVendorModal()">Cancel</button>
+            </div>
+        </div>
     </div>
 
-  </div>
- </div>
+    <div id="editModal" class="vendor-modal hidden">
+        <div class="vendor-card" style="max-width:900px;">
+            <h3>✏️ Edit Purchase Order</h3>
+            <div style="margin: 20px 0;">
+                <div class="field"><span>Note</span><input id="editNote"></div>
+                <div class="field" style="margin-top:10px;">
+                    <span>GST Rate</span>
+                    <select id="editGst" onchange="calcEdit()">
+                        <option value="0.00">0%</option>
+                        <option value="0.05">5%</option>
+                        <option value="0.18">18%</option>
+                        <option value="0.28">28%</option>
+                    </select>
+                </div>
+            </div>
+            <div id="editItems"></div>
+            <div style="margin-top:20px; font-size:18px; font-weight:800;">
+                Total: ₹ <span id="editTotal">0.00</span>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="primary-btn" style="background:#22c55e;" onclick="updatePO()">Update PO</button>
+                <button class="add-row-btn" style="margin:0;" onclick="closeEdit()">Cancel</button>
+            </div>
+        </div>
+    </div>
 
-
-
- <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
