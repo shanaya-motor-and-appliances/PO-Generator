@@ -38,7 +38,7 @@ body { background-color: var(--bg-main); color: var(--text-main); }
 .section-title h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
 
 .party-box { background: #f8fafc; padding: 20px; border-radius: 16px; border: 1px solid var(--border); }
-.info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-top: 20px; }
+.info-grid { display: grid; grid-template-columns: repeat(3, 1fr);  gap: 15px; margin-top: 20px; }
 .field span { display: block; font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
 input, select, textarea { width: 100%; padding: 12px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 14px; background: white; }
 input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
