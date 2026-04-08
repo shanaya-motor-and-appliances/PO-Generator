@@ -10,6 +10,14 @@ let editingRow = null;
 
 const loader = document.getElementById("loader");
 
+const loaderText = document.getElementById("loaderText");
+
+function setLoaderText(text){
+  if(loaderText){
+    loaderText.textContent = text;
+  }
+}
+
 function showLoader(){
   loader.classList.remove("hidden");
 }
@@ -712,21 +720,40 @@ async function deletePO(po){
 
   if(!confirm("Delete PO?")) return;
 
-  const res = await fetch(SCRIPT_URL,{
-    method:"POST",
-    body:new URLSearchParams({
-      action:"deletePO",
-      po:po
-    })
-  });
+  setLoaderText("Deleting PO...");
+  showLoader();
 
-  const data = await res.json();
+  try{
 
-  if(!data.success){
-    alert("Delete failed");
+    const res = await fetch(SCRIPT_URL,{
+      method:"POST",
+      body:new URLSearchParams({
+        action:"deletePO",
+        po:po
+      })
+    });
+
+    const data = await res.json();
+
+    if(!data.success){
+      alert("Delete failed");
+      return;
+    }
+
+    // 🔥 FULL PAGE REFRESH
+    location.reload();
+
+  }catch(err){
+
+    alert("Error deleting PO");
+    console.error(err);
+
+  }finally{
+
+    setLoaderText("Processing...");
+    hideLoader();
+
   }
-
-  loadPOList();
 }
 
 let currentPO = "";
