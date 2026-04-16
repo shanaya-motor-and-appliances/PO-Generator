@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PODesk | Shanaya Motor</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="icon" type="image/png" href="Fevicon.png">
+    <link rel="icon" type="image/png" href="favicon.png">
 </head>
 <body>
 
@@ -114,6 +114,16 @@
                 </div>
             </footer>
 
+            <div style="margin-bottom:15px;">
+                <input 
+                type="text" 
+                id="poSearch" 
+                placeholder="Search by PO Number or Vendor..."
+                oninput="filterPOList()"
+                style="padding:10px; width:100%; border-radius:8px; border:1px solid #ccc;"
+                >
+            </div>
+            
             <div id="poListSection" class="hidden">
                 <h2 style="margin: 20px 0;">Transaction History</h2>
                 <div style="overflow-x: auto;">
