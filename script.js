@@ -659,7 +659,9 @@ function showList(btn){
 
   document.getElementById("poListSection").classList.remove("hidden");
 
-  loadPOList();
+  setTimeout(() => {
+    loadPOList();
+  }, 0);
 }
 
 function showCreate(btn){
@@ -675,6 +677,7 @@ function showCreate(btn){
 }
 
 function loadPOList(){
+  renderPOList(window.poListData || []);
 
   const data = window.poListData || [];
 
@@ -697,6 +700,32 @@ function loadPOList(){
       </tr>
     `;
   });
+}
+
+function renderPOList(data){
+
+  const body = document.getElementById("poTableBody");
+  body.innerHTML = "";
+
+  let html = "";
+
+  data.forEach(r => {
+    html += `
+      <tr>
+        <td>${r.po}</td>
+        <td>${formatDateDMY(r.date)}</td>
+        <td>${r.party}</td>
+        <td>₹ ${formatINR(r.total)}</td>
+        <td>
+          <span class="action-btn" onclick="viewPDF('${r.po}')">👁️</span>
+          <span class="action-btn" onclick="openEdit('${r.po}')">✏️</span>
+          <span class="action-btn" onclick="deletePO('${r.po}')">🗑️</span>
+        </td>
+      </tr>
+    `;
+  });
+
+  body.innerHTML = html;
 }
 
 function viewPDF(po){
@@ -819,6 +848,7 @@ async function openEdit(po){
       last.querySelector(".item-note").value = it.note || "";
       last.querySelector(".qty").value  = it.qty;
       last.querySelector(".rate").value = it.rate;
+      last.querySelector("select").value = it.unit || "PCS";
 
     });
 
@@ -876,7 +906,9 @@ async function updatePO(){
   }
 
   closeEdit();
-  loadPOList();
+  setTimeout(() => {
+    loadPOList();
+  }, 0);
 }
 
 function renderEditItems(items){
@@ -946,4 +978,18 @@ function formatDateDMY(dateStr){
 function setActiveTab(btn){
   document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
+}
+
+function filterPOList(){
+
+  const value = document.getElementById("poSearch").value.toLowerCase();
+
+  const data = window.poListData || [];
+
+  const filtered = data.filter(r =>
+    (r.po && r.po.toLowerCase().includes(value)) ||
+    (r.party && r.party.toLowerCase().includes(value))
+  );
+
+  renderPOList(filtered);
 }
