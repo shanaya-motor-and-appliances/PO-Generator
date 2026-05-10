@@ -6,7 +6,6 @@ let vendorMasterList = [];
 let selectedVendor = "";
 let editMode = false;
 let editingPO = "";
-let editingRow = null;
 
 const loader = document.getElementById("loader");
 
@@ -88,6 +87,7 @@ window.onload = async () => {
     vendorMasterList = data.partyList || [];
     itemMasterList   = data.itemList || [];
     window.poListData = data.poList || []; // cache
+    window.receivingListData =data.receivingList || [];
 
     // 🔥 PO NUMBER
     const poRes = await fetch(`${SCRIPT_URL}?action=getPONumber`);
@@ -104,6 +104,28 @@ window.onload = async () => {
   } finally {
 
     hideLoader();
+
+    /* RESTORE PAGE */
+
+    const activePage =
+        sessionStorage.getItem("activePage");
+
+    if(activePage === "receiving"){
+
+        const btn = document.querySelector(
+            '.nav-item[onclick*="showReceiving"]'
+        );
+
+        showReceiving(btn);
+
+    }else if(activePage === "records"){
+
+        const btn = document.querySelector(
+            '.nav-item[onclick*="showList"]'
+        );
+
+        showList(btn);
+    }
 
   }
 };
@@ -254,14 +276,18 @@ function clearItems(){
       calc();
     }
 
-document.addEventListener("click", (e) => { 
+document.addEventListener("click", (e) => {
 
+  // ITEM DROPDOWN
   if (!e.target.closest(".item-container")) {
-
     document.querySelectorAll(".item-suggestions").forEach(box => {
       box.classList.add("hidden");
     });
+  }
 
+  // VENDOR DROPDOWN
+  if (!e.target.closest(".search-box-container")) {
+    vendorSuggestions.classList.add("hidden");
   }
 
 });
@@ -369,14 +395,16 @@ async function generatePO(){
     </html>
   `);
 
-  document.querySelector(".primary-btn").disabled = true;
+  const btn = document.getElementById("saveBtn");
+  btn.disabled = true;
+  setLoaderText("Generating PO...");
   showLoader();
 
   try{
 
 
     const payload = {
-      row: editMode && editingRow ? Number(editingRow) : "",
+      row: "",
       po: editMode ? editingPO : poNumberEl.textContent,  // ✅ FIXED
       party: selectedVendor,
       date: poDateText.textContent,
@@ -447,8 +475,8 @@ async function generatePO(){
   }finally{
 
     hideLoader();
-    document.querySelector(".primary-btn").disabled = false;
-
+    const btn = document.getElementById("saveBtn");
+    btn.disabled = false;
   }
 }
 
@@ -508,7 +536,15 @@ function saveVendor(){
     terms: v_terms.value
   };
 
+  if(!v_name.value.trim()){
+   alert("Vendor name required");
+   return;
+ }
+
+  setVendorLoaderText("Saving Vendor...");
   showVendorLoader();
+
+
 
   fetch(SCRIPT_URL, {
     method:"POST",
@@ -534,6 +570,14 @@ function saveVendor(){
   .finally(()=>{
     hideVendorLoader();
   });
+}
+
+function refreshPage(){
+
+  setLoaderText("Syncing Data...");
+  showLoader();
+
+  location.reload();
 }
 
 
@@ -621,10 +665,6 @@ partySearch.addEventListener("input", () => {
 
 let vendorLoading = false;
 
-function refreshPage(){
-  location.reload();
-}
-
 let lastSheetState = null;
 
 async function checkSheetUpdate(){
@@ -649,83 +689,47 @@ async function checkSheetUpdate(){
 setInterval(checkSheetUpdate, 15000); // every 15 sec
 
 function showList(btn){
+
+  sessionStorage.setItem(
+      "activePage",
+      "records"
+  );
+
   if(btn) setActiveTab(btn);
 
-  document.querySelectorAll(".form-section").forEach(el=>{
-    el.style.display="none";
-  });
+  document.getElementById("createSection")
+    .classList.add("hidden");
 
-  document.querySelector(".po-footer").style.display="none";
+  document.getElementById("poListSection")
+    .classList.remove("hidden");
 
-  document.getElementById("poListSection").classList.remove("hidden");
+  document.getElementById("receivingSection")
+    .classList.add("hidden");
 
-  setTimeout(() => {
-    loadPOList();
-  }, 0);
+  setTimeout(loadPOList, 0);
 }
 
 function showCreate(btn){
+
+  sessionStorage.setItem(
+      "activePage",
+      "create"
+  );
+
   if(btn) setActiveTab(btn);
 
-  document.querySelectorAll(".form-section").forEach(el=>{
-    el.style.display="block";
-  });
+  document.getElementById("createSection")
+    .classList.remove("hidden");
 
-  document.querySelector(".po-footer").style.display="block";
+  document.getElementById("poListSection")
+    .classList.add("hidden");
 
-  document.getElementById("poListSection").classList.add("hidden");
+  document.getElementById("receivingSection")
+    .classList.add("hidden");
 }
 
 function loadPOList(){
-  renderPOList(window.poListData || []);
-
-  const data = window.poListData || [];
-
-  const body = document.getElementById("poTableBody");
-  body.innerHTML = "";
-
-  data.forEach(r => {
-
-    body.innerHTML += `
-      <tr>
-        <td>${r.po}</td>
-        <td>${formatDateDMY(r.date)}</td>
-        <td>${r.party}</td>
-        <td>₹ ${formatINR(r.total)}</td>
-        <td>
-          <span class="action-btn" title="View PDF" onclick="viewPDF('${r.po}')">👁️</span>
-          <span class="action-btn" onclick="openEdit('${r.po}')">✏️</span>
-          <span class="action-btn" onclick="deletePO('${r.po}')">🗑️</span>
-        </td>
-      </tr>
-    `;
-  });
-}
-
-function renderPOList(data){
-
-  const body = document.getElementById("poTableBody");
-  body.innerHTML = "";
-
-  let html = "";
-
-  data.forEach(r => {
-    html += `
-      <tr>
-        <td>${r.po}</td>
-        <td>${formatDateDMY(r.date)}</td>
-        <td>${r.party}</td>
-        <td>₹ ${formatINR(r.total)}</td>
-        <td>
-          <span class="action-btn" onclick="viewPDF('${r.po}')">👁️</span>
-          <span class="action-btn" onclick="openEdit('${r.po}')">✏️</span>
-          <span class="action-btn" onclick="deletePO('${r.po}')">🗑️</span>
-        </td>
-      </tr>
-    `;
-  });
-
-  body.innerHTML = html;
+    renderPOList(window.poListData || []);
 }
 
 function viewPDF(po){
@@ -742,57 +746,94 @@ function viewPDF(po){
     return;
   }
 
+  if(data.status === "CANCELLED"){
+
+    alert("PO not available due to cancelled");
+    return;
+  }
+
   window.open(data.pdf, "_blank");
 }
 
-async function deletePO(po){
+async function cancelPO(po){
 
-  if(!confirm("Delete PO?")) return;
+  const confirmCancel =
+    confirm(
+      "Cancel this PO?"
+    );
 
-  setLoaderText("Deleting PO...");
+  if(!confirmCancel) return;
+
+  setLoaderText("Cancelling PO...");
   showLoader();
 
   try{
 
-    const res = await fetch(SCRIPT_URL,{
-      method:"POST",
-      body:new URLSearchParams({
-        action:"deletePO",
-        po:po
-      })
-    });
+    const res = await fetch(
+      SCRIPT_URL,
+      {
+        method:"POST",
 
-    const data = await res.json();
+        body:new URLSearchParams({
+          action:"cancelPO",
+          po:po
+        })
+      }
+    );
+
+    const data =
+      await res.json();
 
     if(!data.success){
-      alert("Delete failed");
+
+      alert("Cancel failed");
       return;
     }
 
-    // 🔥 FULL PAGE REFRESH
-    location.reload();
+    // UPDATE CACHE
+    const poObj =
+      (window.poListData || [])
+      .find(p => p.po === po);
+
+    if(poObj){
+      poObj.status = "CANCELLED";
+    }
+
+    renderPOList(
+      window.poListData || []
+    );
 
   }catch(err){
 
-    alert("Error deleting PO");
     console.error(err);
+
+    alert("Error cancelling PO");
 
   }finally{
 
-    setLoaderText("Processing...");
     hideLoader();
-
   }
 }
 
-let currentPO = "";
-
 async function openEdit(po){
+
+  const data =
+    (window.poListData || [])
+    .find(p => p.po === po);
+
+  if(data?.status === "CANCELLED"){
+
+    alert("Cancelled PO cannot be edited");
+    return;
+  }
 
   editMode = true;
   editingPO = po;
 
-  showCreate();
+  showCreate(
+    document.getElementById("nav-create")
+  );
+  setLoaderText("Opening PO...");
   showLoader();
 
   try{
@@ -804,10 +845,6 @@ async function openEdit(po){
       alert("PO not found");
       return;
     }
-
-    // 🔥 FIND ROW (important for update)
-    const index = (window.poListData || []).findIndex(p => p.po === po);
-    editingRow = index >= 0 ? index + 2 : 0; // +2 because header + 0 index
 
     // ================= BASIC =================
     poNumberEl.textContent = po;
@@ -866,117 +903,58 @@ async function openEdit(po){
   btn.style.background = "#22c55e";
 }
 
-function closeEdit(){
-  const modal = document.getElementById("editModal");
-  modal.classList.add("hidden");
-  modal.style.display = "none";
-}
-
-async function updatePO(){
-
-  const note = document.getElementById("editNote").value;
-  const gst  = document.getElementById("editGst").value;
-
-  const items = [];
-
-  document.querySelectorAll("#editItems .item-row").forEach(r => {
-    items.push({
-      name: r.querySelector(".e-name").value,
-      qty: r.querySelector(".e-qty").value,
-      rate: r.querySelector(".e-rate").value
-    });
-  });
-
-  const res = await fetch(SCRIPT_URL,{
-    method:"POST",
-    body:new URLSearchParams({
-      action:"updatePO",
-      po:currentPO,
-      note:note,
-      gst:gst,
-      items: JSON.stringify(items)
-    })
-  });
-
-  const data = await res.json();
-
-  if(!data.success){
-    alert("Update failed");
-    return;
-  }
-
-  closeEdit();
-  setTimeout(() => {
-    loadPOList();
-  }, 0);
-}
-
-function renderEditItems(items){
-
-  const box = document.getElementById("editItems");
-  box.innerHTML = "";
-
-  items.forEach(i => {
-
-    box.innerHTML += `
-      <div class="item-row">
-        <input class="e-name" value="${i.name}">
-        <input class="e-qty" type="number" value="${i.qty}" oninput="calcEdit()">
-        <input class="e-rate" type="number" value="${i.rate}" oninput="calcEdit()">
-        <input class="e-amt" readonly>
-      </div>
-    `;
-  });
-
-  calcEdit();
-}
-
-function calcEdit(){
-
-  let sub = 0;
-
-  document.querySelectorAll("#editItems .item-row").forEach(r => {
-
-    const qty  = Number(r.querySelector(".e-qty").value || 0);
-    const rate = Number(r.querySelector(".e-rate").value || 0);
-
-    const amt = qty * rate;
-    r.querySelector(".e-amt").value = formatINR(amt);
-
-    sub += amt;
-  });
-
-  const gstRate = Number(document.getElementById("editGst").value);
-  const total = sub + (sub * gstRate);
-
-  document.getElementById("editTotal").textContent = formatINR(total);
-}
-
 function formatDateDMY(dateStr){
 
-  if(!dateStr) return "";
+    if(!dateStr) return "";
 
-  // 🔥 ISO format handle (2026-04-02T18:30:00.000Z)
-  if(dateStr.includes("T")){
-    const d = new Date(dateStr);
-    const dd = String(d.getDate()).padStart(2,"0");
-    const mm = String(d.getMonth()+1).padStart(2,"0");
-    const yy = d.getFullYear();
-    return `${dd}/${mm}/${yy}`;
-  }
+    // 🔥 DATE OBJECT HANDLE
+    if(dateStr instanceof Date){
 
-  // 🔥 YYYY-MM-DD
-  if(dateStr.includes("-")){
-    const parts = dateStr.split("-");
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  }
+        const dd = String(dateStr.getDate())
+            .padStart(2,"0");
 
-  // 🔥 fallback
-  return dateStr;
+        const mm = String(dateStr.getMonth()+1)
+            .padStart(2,"0");
+
+        const yy = dateStr.getFullYear();
+
+        return `${dd}/${mm}/${yy}`;
+    }
+
+    // 🔥 convert to string safely
+    dateStr = dateStr.toString();
+
+    // ISO
+    if(dateStr.includes("T")){
+
+        const d = new Date(dateStr);
+
+        const dd = String(d.getDate())
+            .padStart(2,"0");
+
+        const mm = String(d.getMonth()+1)
+            .padStart(2,"0");
+
+        const yy = d.getFullYear();
+
+        return `${dd}/${mm}/${yy}`;
+    }
+
+    // YYYY-MM-DD
+    if(dateStr.includes("-")){
+
+        const parts = dateStr.split("-");
+
+        if(parts.length === 3){
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+    }
+
+    return dateStr;
 }
 
 function setActiveTab(btn){
-  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
 }
 
@@ -992,4 +970,435 @@ function filterPOList(){
   );
 
   renderPOList(filtered);
+}
+
+let clockStarted = false;
+
+function startClock() {
+
+    if(clockStarted) return;
+    clockStarted = true;
+
+    setInterval(() => {
+        const now = new Date();
+        const clock = document.getElementById('live-clock');
+
+        if(clock){
+            clock.textContent =
+              now.toLocaleTimeString('en-IN', { hour12: true });
+        }
+    }, 1000);
+}
+
+// Refined PO List Rendering
+function renderPOList(data) {
+
+    const body = document.getElementById("poTableBody");
+
+    body.innerHTML = data.map(r => `
+        <tr class="${
+          r.status === 'CANCELLED'
+          ? 'cancelled-row'
+          : ''
+        }">
+            <td><span class="po-tag">${r.po}</span></td>
+            <td>${formatDateDMY(r.date)}</td>
+            <td class="vendor-cell">
+
+            <div class="vendor-wrap">
+
+              <strong>${r.party}</strong>
+
+            </div>
+
+          </td>
+            <td class="amount-cell">₹ ${formatINR(r.total)}</td>
+            <td class="text-right">
+                <div class="action-group">
+
+                  <button
+                    class="icon-btn view"
+                    onclick="viewPDF('${r.po}')"
+                    title="View PDF"
+                  >
+                    <i data-lucide="external-link"></i>
+                  </button>
+
+                  ${
+                    r.status === "CANCELLED"
+                    ?
+
+                    `
+                      <div class="cancelled-text">
+                          Cancelled
+                      </div>
+                    `
+
+                    :
+
+                    `
+                      <button
+                        class="icon-btn edit"
+                        onclick="openEdit('${r.po}')"
+                        title="Edit"
+                      >
+                        <i data-lucide="edit-3"></i>
+                      </button>
+
+                      <button
+                        class="icon-btn delete"
+                        onclick="cancelPO('${r.po}')"
+                        title="Cancel PO"
+                      >
+                        <i data-lucide="ban"></i>
+                      </button>
+                    `
+                  }
+
+                </div>
+            </td>
+        </tr>
+    `).join("");
+
+    lucide.createIcons();
+    startClock();
+}
+
+let receivingData = [];
+let currentReceiving = null;
+
+function showReceiving(btn){
+
+  sessionStorage.setItem(
+      "activePage",
+      "receiving"
+  );
+
+    if(btn) setActiveTab(btn);
+
+    document.getElementById("createSection")
+        .classList.add("hidden");
+
+    document.getElementById("poListSection")
+        .classList.add("hidden");
+
+    document.getElementById("receivingSection")
+        .classList.remove("hidden");
+
+    loadReceivingList();
+}
+
+function loadReceivingList(){
+
+    receivingData =
+        window.receivingListData || [];
+
+    renderReceivingTable();
+}
+
+function filterReceivingTable(){
+
+    const value = document
+        .getElementById("receivingSearch")
+        .value
+        .toLowerCase()
+        .trim();
+
+    const body = document.getElementById(
+        "receivingTableBody"
+    );
+
+    const rows = body.querySelectorAll("tr");
+
+    rows.forEach(row => {
+
+        const po = row.children[0]
+            .textContent
+            .toLowerCase();
+
+        const vendor = row.children[1]
+            .textContent
+            .toLowerCase();
+
+        const item = row.children[3]
+            .textContent
+            .toLowerCase();
+
+        const match =
+            po.includes(value) ||
+            vendor.includes(value) ||
+            item.includes(value);
+
+        row.style.display =
+            match ? "" : "none";
+    });
+}
+
+function renderReceivingTable(){
+
+    const body = document.getElementById(
+        "receivingTableBody"
+    );
+
+    let html = "";
+
+    (window.poListData || [])
+    .filter(po => po.status !== "CANCELLED")
+    .forEach(po => {
+
+        let items = [];
+
+        try{
+
+            items = JSON.parse(po.items || "[]");
+
+        }catch(err){
+
+            console.log(
+                "Invalid JSON for PO:",
+                po.po
+            );
+
+            return;
+        }
+
+    items.forEach((item,index) => {
+
+            const totalReceived =
+                receivingData
+                .filter(r =>
+                    r.po == po.po &&
+                    r.item == item.name
+                )
+                .reduce((sum,r)=>
+                    sum + Number(r.receivedQty),
+                0);
+
+            const pending =
+                Number(item.qty) - totalReceived;
+
+            const excess =
+                totalReceived - Number(item.qty);
+
+            const lastInvoice =
+                formatDateDMY(
+                    receivingData
+                    .filter(r =>
+                        r.po == po.po &&
+                        r.item == item.name
+                    )
+                    .slice(-1)[0]?.invoiceDate
+                ) || "-";
+
+                        html += `
+                            <tr>
+
+                    <td>${po.po}</td>
+                    <td>${po.party}</td>
+                    <td>${formatDateDMY(po.date)}</td>
+                    <td>${item.name}</td>
+
+                    <td>${item.qty}</td>
+
+                    <td>${totalReceived}</td>
+
+                    <td>
+                        ${
+                            excess > 0
+                            ?
+                            `<span class="excess-badge">
+                                ${excess}
+                            </span>`
+
+                            :
+
+                            pending <= 0
+
+                            ?
+
+                            `<span class="completed-badge">
+                                Completed
+                            </span>`
+
+                            :
+
+                            `<span class="pending-badge">
+                                ${pending}
+                            </span>`
+                        }
+                    </td>
+
+                    <td>
+
+                        <button
+                            class="receive-btn"
+                            onclick='openReceivingModal(${JSON.stringify({
+                                po: po.po,
+                                vendor: po.party,
+                                poDate: po.date,
+                                item: item.name,
+                                poQty: item.qty,
+                                received: totalReceived,
+                                pending: pending
+                            })})'
+                        >
+                            <i data-lucide="package-check"></i>
+                        </button>
+
+                    </td>
+
+                </tr>
+            `;
+        });
+    });
+
+    body.innerHTML = html;
+    lucide.createIcons();
+}
+
+function openReceivingModal(data){
+
+    currentReceiving = data;
+
+    document.getElementById("receivingModal")
+        .classList.remove("hidden");
+
+    document.getElementById("r_po").value =
+        data.po;
+
+    document.getElementById("r_item").value =
+        data.item;
+
+    document.getElementById("r_poqty").value =
+        data.poQty;
+
+    document.getElementById("r_received").value =
+        data.received;
+
+    document.getElementById("r_pending").value =
+        data.pending;
+
+    document.getElementById("r_newqty").value = "";
+
+    document.getElementById("r_invoice").value = "";
+}
+
+function closeReceivingModal(){
+
+    document.getElementById("receivingModal")
+        .classList.add("hidden");
+}
+
+async function saveReceiving(){
+
+    const qty = Number(
+        document.getElementById("r_newqty").value
+    );
+
+    const invoiceDate =
+        document.getElementById("r_invoice").value;
+
+    if(!qty || qty <= 0){
+        alert("Enter valid quantity");
+        return;
+    }
+
+    if(!invoiceDate){
+        alert("Select invoice date");
+        return;
+    }
+    setLoaderText(
+        "Saving Receiving Entry..."
+    );
+
+    showLoader();
+
+    const saveBtn = document.querySelector(
+        "#receivingModal .btn-save"
+    );
+
+    if(saveBtn){
+        saveBtn.disabled = true;
+    }
+
+    try{
+
+        const payload = {
+            po: currentReceiving.po,
+            vendor: currentReceiving.vendor,
+            poDate: currentReceiving.poDate,
+            item: currentReceiving.item,
+            poQty: currentReceiving.poQty,
+            receivedQty: qty,
+            totalReceived: currentReceiving.received,
+            invoiceDate: invoiceDate
+        };
+
+        const formData = new FormData();
+
+        formData.append(
+            "action",
+            "saveReceiving"
+        );
+
+        formData.append(
+            "data",
+            JSON.stringify(payload)
+        );
+
+        const res = await fetch(SCRIPT_URL,{
+            method:"POST",
+            body:formData
+        });
+
+        const result = await res.json();
+
+        if(!result.success){
+            throw new Error(result.error);
+        }
+
+        closeReceivingModal();
+
+        /* STAY ON RECEIVING PAGE */
+        sessionStorage.setItem(
+            "activePage",
+            "receiving"
+        );
+
+        /* RELOAD */
+        location.reload();
+
+    }catch(err){
+
+        alert(err.message);
+
+    }finally{
+
+      if(saveBtn){
+          saveBtn.disabled = false;
+      }
+        hideLoader();
+    }
+}
+
+
+let receivingRowData = [];
+
+function openReceivingModalByIndex(index){
+
+    const data = receivingRowData[index];
+
+    if(!data) return;
+
+    openReceivingModal(data);
+}
+
+const vendorLoaderText =
+document.getElementById("vendorLoaderText");
+
+function setVendorLoaderText(text){
+
+    if(vendorLoaderText){
+        vendorLoaderText.textContent = text;
+    }
 }
