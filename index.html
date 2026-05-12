@@ -57,6 +57,10 @@
                     <i data-lucide="truck"></i>
                     <span>Receiving</span>
                 </button>
+                <button class="nav-item" id="nav-settings" onclick="showSettings(this)">
+                    <i data-lucide="settings"></i>
+                    <span>Settings</span>
+                </button>
             </nav>
             <div class="nav-footer">
                 <button class="sync-btn" onclick="refreshPage()">
@@ -247,6 +251,47 @@
                     </table>
                 </div>
             </div>
+            <!-- SECTION: SETTINGS -->
+            <div id="settingsSection"
+                 class="glass-card fade-in hidden">
+
+                <div class="list-tools">
+
+                    <h3>Vendor Settings</h3>
+
+                    <div class="search-filter">
+                        <input
+                            type="text"
+                            id="vendorSettingsSearch"
+                            placeholder="Search Vendor..."
+                            oninput="filterVendorSettings()"
+                        >
+                        <i data-lucide="search"></i>
+                    </div>
+
+                </div>
+
+                <div class="table-container">
+
+                    <table class="premium-table">
+
+                        <thead>
+                            <tr>
+                                <th>Vendor Name</th>
+                                <th>Contact Person</th>
+                                <th>Phone</th>
+                                <th>GSTIN</th>
+                                <th>State</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="vendorSettingsBody"></tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
         </main>
     </div>
 
@@ -308,6 +353,128 @@
                 <button class="btn-cancel" onclick="closeReceivingModal()">Cancel</button>
             </div>
         </div>
+    </div>
+    <!-- PDF VIEWER MODAL -->
+    <div id="pdfModal" class="pdf-modal hidden">
+
+        <div class="pdf-modal-box">
+
+            <!-- HEADER -->
+            <div class="pdf-modal-header">
+
+                <div class="pdf-title-wrap">
+                    <span class="pdf-title" id="pdfTitle">
+                        PDF Viewer
+                    </span>
+
+                    <a id="pdfDownloadBtn"
+                    class="pdf-download-btn"
+                    target="_blank"
+                    download>
+                        <i data-lucide="download"></i>
+                    </a>
+                </div>
+
+                <button class="pdf-close-btn"
+                        onclick="closePDFModal()">
+                ✕
+                </button>
+
+            </div>
+
+            <!-- BODY -->
+            <div class="pdf-frame-wrap">
+
+                <iframe id="pdfFrame"></iframe>
+
+            </div>
+
+        </div>
+
+    </div>
+    <!-- VENDOR PROFILE MODAL -->
+    <div id="vendorProfileModal"
+        class="vendor-profile-overlay hidden">
+
+        <div class="vendor-profile-card">
+
+            <!-- CLOSE -->
+            <button class="vendor-profile-close"
+                    onclick="closeVendorProfile()">
+                ✕
+            </button>
+
+            <button
+                class="vendor-edit-float"
+                onclick="editVendorProfile()"
+                title="Edit Vendor"
+            >
+                <i data-lucide="square-pen"></i>
+            </button>
+
+            <!-- HEADER -->
+            <div class="vendor-profile-header">
+
+                <div class="vendor-avatar"
+                    id="vendorAvatar">
+                    A
+                </div>
+
+                <h2 id="vendorProfileName">
+                    Vendor Name
+                </h2>
+
+            </div>
+
+            <!-- DETAILS -->
+            <div class="vendor-profile-grid">
+
+                <div class="vendor-detail-box">
+                    <label>Vendor Address</label>
+                    <p id="vp_address">-</p>
+                </div>
+
+                <div class="vendor-detail-box">
+                    <label>GSTIN</label>
+                    <p id="vp_gst">-</p>
+                </div>
+
+                <div class="vendor-detail-box">
+                    <label>Contact Number</label>
+                    <p id="vp_phone">-</p>
+                </div>
+
+                <div class="vendor-detail-box">
+                    <label>Contact Person</label>
+                    <p id="vp_person">-</p>
+                </div>
+
+                <div class="vendor-detail-box">
+                    <label>Payment Terms</label>
+                    <p id="vp_terms">-</p>
+                </div>
+
+                <div class="vendor-detail-box">
+                    <label>Total POs</label>
+                    <p id="vp_total_po">0</p>
+                </div>
+
+            </div>
+
+            <!-- MATERIALS -->
+            <div class="vendor-materials-section">
+
+                <h3>Materials Supplied</h3>
+
+                <div id="vendorMaterials"
+                    class="vendor-materials-wrap">
+
+                </div>
+
+            </div>
+
+        </div>
+
     </div>
 
     <script src="script.js"></script>
