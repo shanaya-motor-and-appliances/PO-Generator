@@ -1180,6 +1180,18 @@ function renderReceivingTable(){
             const excess =
                 totalReceived - Number(item.qty);
 
+            const pendingFormatted =
+                formatQty(pending);
+
+            const excessFormatted =
+                formatQty(excess);
+
+            const receivedFormatted =
+                formatQty(totalReceived);
+
+            const poQtyFormatted =
+                formatQty(item.qty);
+
             const lastInvoice =
                 formatDateDMY(
                     receivingData
@@ -1198,16 +1210,16 @@ function renderReceivingTable(){
                     <td>${formatDateDMY(po.date)}</td>
                     <td>${item.name}</td>
 
-                    <td>${item.qty}</td>
+                    <td>${poQtyFormatted}</td>
 
-                    <td>${totalReceived}</td>
+                    <td>${receivedFormatted}</td>
 
                     <td>
                         ${
                             excess > 0
                             ?
                             `<span class="excess-badge">
-                                ${excess}
+                                ${excessFormatted}
                             </span>`
 
                             :
@@ -1223,7 +1235,7 @@ function renderReceivingTable(){
                             :
 
                             `<span class="pending-badge">
-                                ${pending}
+                                ${pendingFormatted}
                             </span>`
                         }
                     </td>
@@ -1401,4 +1413,17 @@ function setVendorLoaderText(text){
     if(vendorLoaderText){
         vendorLoaderText.textContent = text;
     }
+}
+
+function formatQty(num){
+
+    num = Number(num || 0);
+
+    // round figure
+    if(Number.isInteger(num)){
+        return num.toString();
+    }
+
+    // decimal
+    return num.toFixed(2);
 }
