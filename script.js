@@ -6,6 +6,8 @@ let vendorMasterList = [];
 let selectedVendor = "";
 let editMode = false;
 let editingPO = "";
+let currentVendorProfile = null;
+let vendorEditMode = false;
 
 const loader = document.getElementById("loader");
 
@@ -24,6 +26,7 @@ function showLoader(){
 function hideLoader(){
   loader.classList.add("hidden"); 
 }
+
 function formatINR(num){
   return Number(num).toLocaleString("en-IN", {
     minimumFractionDigits: 2,
@@ -125,6 +128,13 @@ window.onload = async () => {
         );
 
         showList(btn);
+    }else if(activePage === "settings"){
+
+        const btn = document.querySelector(
+            '.nav-item[onclick*="showSettings"]'
+        );
+
+        showSettings(btn);
     }
 
   }
@@ -533,7 +543,10 @@ function saveVendor(){
     pin: v_pin.value,
     phone: v_phone.value,
     gst: v_gst.value,
-    terms: v_terms.value
+    terms: v_terms.value,
+
+    oldVendor:
+        currentVendorProfile?.vendor || ""
   };
 
   if(!v_name.value.trim()){
@@ -550,7 +563,7 @@ function saveVendor(){
     method:"POST",
     body: (()=> {
       const f = new FormData();
-      f.append("action","addVendor");
+      f.append("action", vendorEditMode ? "updateVendor" : "addVendor");
       f.append("data",JSON.stringify(vendor));
       return f;
     })()
@@ -706,6 +719,9 @@ function showList(btn){
   document.getElementById("receivingSection")
     .classList.add("hidden");
 
+  document.getElementById("settingsSection")
+    .classList.add("hidden");
+
   setTimeout(loadPOList, 0);
 }
 
@@ -725,6 +741,9 @@ function showCreate(btn){
     .classList.add("hidden");
 
   document.getElementById("receivingSection")
+    .classList.add("hidden");
+
+  document.getElementById("settingsSection")
     .classList.add("hidden");
 }
 
@@ -752,7 +771,68 @@ function viewPDF(po){
     return;
   }
 
-  window.open(data.pdf, "_blank");
+  openPDFModal(data.pdf, po);
+}
+
+function openPDFModal(url, title = "PDF Viewer"){
+
+  const modal =
+    document.getElementById("pdfModal");
+
+  const frame =
+    document.getElementById("pdfFrame");
+
+  const downloadBtn =
+    document.getElementById("pdfDownloadBtn");
+
+  const titleEl =
+    document.getElementById("pdfTitle");
+
+  const fileIdMatch =
+    url.match(/\/d\/(.*?)\//);
+
+  if(!fileIdMatch){
+
+    alert("Invalid PDF URL");
+    return;
+  }
+
+  const fileId = fileIdMatch[1];
+
+  // PDF Preview
+  frame.src =
+    `https://drive.google.com/file/d/${fileId}/preview`;
+
+  // Direct Download
+  const downloadUrl =
+    `https://drive.google.com/uc?export=download&id=${fileId}`;
+
+  downloadBtn.href = downloadUrl;
+
+  // Suggested file name
+  downloadBtn.setAttribute(
+    "download",
+    `${title}.pdf`
+  );
+
+  titleEl.textContent = title;
+
+  modal.classList.remove("hidden");
+
+  document.body.style.overflow = "hidden";
+
+  lucide.createIcons();
+}
+
+function closePDFModal(){
+
+  document.getElementById("pdfModal")
+    .classList.add("hidden");
+
+  document.getElementById("pdfFrame")
+    .src = "";
+
+  document.body.style.overflow = "";
 }
 
 async function cancelPO(po){
@@ -1084,6 +1164,9 @@ function showReceiving(btn){
 
     document.getElementById("receivingSection")
         .classList.remove("hidden");
+
+    document.getElementById("settingsSection")
+        .classList.add("hidden");
 
     loadReceivingList();
 }
@@ -1426,4 +1509,268 @@ function formatQty(num){
 
     // decimal
     return num.toFixed(2);
+}
+
+function showSettings(btn){
+
+    sessionStorage.setItem(
+        "activePage",
+        "settings"
+    );
+
+    if(btn) setActiveTab(btn);
+
+    document.getElementById("createSection")
+        .classList.add("hidden");
+
+    document.getElementById("poListSection")
+        .classList.add("hidden");
+
+    document.getElementById("receivingSection")
+        .classList.add("hidden");
+
+    document.getElementById("settingsSection")
+        .classList.remove("hidden");
+
+    renderVendorSettings(
+        vendorMasterList || []
+    );
+}
+
+function renderVendorSettings(data){
+
+    const body =
+        document.getElementById(
+            "vendorSettingsBody"
+        );
+
+    body.innerHTML = data.map(v => `
+        <tr>
+            <td>
+                <button
+                    class="vendor-open-btn"
+                    onclick='openVendorProfile(${JSON.stringify(v)})'
+                >
+                    ${v.vendor || "-"}
+                </button>
+            </td>
+
+            <td>${v.person || "-"}</td>
+
+            <td>${v.phone || "-"}</td>
+
+            <td>${v.gst || "-"}</td>
+
+            <td>${v.state || "-"}</td>
+        </tr>
+    `).join("");
+
+    lucide.createIcons();
+}
+
+function filterVendorSettings(){
+
+    const value =
+        document
+        .getElementById(
+            "vendorSettingsSearch"
+        )
+        .value
+        .toLowerCase();
+
+    const filtered =
+        (vendorMasterList || []).filter(v =>
+
+            (v.vendor || "")
+            .toLowerCase()
+            .includes(value)
+
+            ||
+
+            (v.person || "")
+            .toLowerCase()
+            .includes(value)
+        );
+
+    renderVendorSettings(filtered);
+}
+
+function openVendorProfile(vendor){
+
+  currentVendorProfile = vendor;
+
+    const modal =
+        document.getElementById(
+            "vendorProfileModal"
+        );
+
+    // HEADER
+    document.getElementById(
+        "vendorProfileName"
+    ).textContent =
+        vendor.vendor || "-";
+
+    document.getElementById(
+        "vendorAvatar"
+    ).textContent =
+        (vendor.vendor || "V")
+        .charAt(0)
+        .toUpperCase();
+
+    // DETAILS
+    document.getElementById(
+        "vp_address"
+    ).textContent =
+        `${vendor.building || ""},
+         ${vendor.street || ""},
+         ${vendor.state || "-"} - ${vendor.pin || "-"}`;
+
+    document.getElementById(
+        "vp_person"
+    ).textContent =
+        vendor.person || "-";
+
+    document.getElementById(
+        "vp_phone"
+    ).textContent =
+        vendor.phone || "-";
+
+    document.getElementById(
+        "vp_gst"
+    ).textContent =
+        vendor.gst || "-";
+
+    document.getElementById(
+        "vp_terms"
+    ).textContent =
+        vendor.terms || "-";
+
+    // MATERIALS
+    const materialsWrap =
+        document.getElementById(
+            "vendorMaterials"
+        );
+
+    const items =
+        (itemMasterList || [])
+        .filter(i =>
+            i.vendor === vendor.vendor
+        );
+
+    // TOTAL PO COUNT
+    const totalPOs =
+        (window.poListData || [])
+        .filter(p =>
+            p.party === vendor.vendor
+        ).length;
+
+    document.getElementById(
+        "vp_total_po"
+    ).textContent = totalPOs;
+
+
+    // UNIQUE ITEMS WITH RATE
+    const uniqueItems = [];
+
+    items.forEach(i => {
+
+        const exists =
+            uniqueItems.find(x =>
+                x.name === i.name
+            );
+
+        if(!exists){
+
+            uniqueItems.push({
+                name: i.name,
+                rate: i.rate
+            });
+        }
+    });
+
+    materialsWrap.innerHTML =
+        uniqueItems.length
+
+        ?
+
+        uniqueItems.map(item => `
+            <div class="material-chip">
+
+                ${item.name}
+
+                <span>
+                    ₹ ${formatINR(item.rate || 0)}
+                </span>
+
+            </div>
+        `).join("")
+
+        :
+
+        `<p>No materials found</p>`;
+
+    modal.classList.remove("hidden");
+
+    document.body.style.overflow =
+        "hidden";
+}
+
+function editVendorProfile(){
+
+    if(!currentVendorProfile) return;
+
+    vendorEditMode = true;
+
+    // CLOSE PROFILE
+    closeVendorProfile();
+
+    // OPEN MODAL
+    openVendorModal();
+
+    // TITLE CHANGE
+    document.querySelector(
+        "#vendorModal h2"
+    ).textContent = "Edit Vendor";
+
+    // FILL DATA
+    v_name.value =
+        currentVendorProfile.vendor || "";
+
+    v_person.value =
+        currentVendorProfile.person || "";
+
+    v_building.value =
+        currentVendorProfile.building || "";
+
+    v_street.value =
+        currentVendorProfile.street || "";
+
+    v_state.value =
+        currentVendorProfile.state || "";
+
+    v_pin.value =
+        currentVendorProfile.pin || "";
+
+    v_phone.value =
+        currentVendorProfile.phone || "";
+
+    v_gst.value =
+        currentVendorProfile.gst || "";
+
+    v_terms.value =
+        currentVendorProfile.terms || "";
+
+    // BUTTON TEXT
+    document.querySelector(
+        "#vendorModal .btn-save"
+    ).textContent = "Update Vendor";
+}
+
+function closeVendorProfile(){
+
+    document.getElementById(
+        "vendorProfileModal"
+    ).classList.add("hidden");
+
+    document.body.style.overflow = "";
 }
