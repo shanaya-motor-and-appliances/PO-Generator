@@ -743,7 +743,13 @@ RECEIVING TABLE
 ========================= */
 #receivingSection .table-container {
     width: 100%;
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+#receivingSection .premium-table {
+    min-width: 950px;
 }
 
 #receivingSection .premium-table {
@@ -1281,4 +1287,403 @@ table{
     opacity:0.7;
 
     padding-right:10px;
+}
+
+/* =========================================
+   RESPONSIVE DESIGN
+========================================= */
+
+/* TABLET */
+@media (max-width: 1024px) {
+
+    .main-content{
+        padding:20px;
+    }
+
+    .glass-card{
+        padding:24px;
+        border-radius:20px;
+    }
+
+    .content-header{
+        flex-direction:column;
+        gap:20px;
+        align-items:flex-start;
+    }
+
+    .vendor-search-grid{
+        grid-template-columns:1fr;
+    }
+
+    .read-only-fields{
+        grid-template-columns:repeat(2,1fr);
+    }
+
+    .modal-grid{
+        grid-template-columns:repeat(2,1fr);
+    }
+
+    .modal-grid .full{
+        grid-column:span 2;
+    }
+
+    .items-thead,
+    .item-row{
+        grid-template-columns:
+            2.5fr
+            1fr
+            1fr
+            1fr
+            1.2fr
+            50px;
+    }
+
+    .summary-value,
+    .grand-total-value{
+        font-size:28px;
+    }
+}
+
+
+/* MOBILE */
+@media (max-width: 768px) {
+
+    body{
+        height:auto;
+    }
+
+    .app-container{
+        flex-direction:column;
+        height:auto;
+    }
+
+    /* SIDEBAR */
+    .side-nav{
+        width:100%;
+        flex-direction:row;
+        align-items:center;
+        justify-content:space-between;
+        padding:14px;
+        gap:12px;
+        position:sticky;
+        top:0;
+        z-index:100;
+    }
+
+    .logo-area{
+        margin-bottom:0;
+    }
+
+    .logo-text{
+        display:none;
+    }
+
+    .nav-links{
+        display:flex;
+        gap:8px;
+        flex:1;
+        overflow-x:auto;
+    }
+
+    .nav-item{
+        margin-bottom:0;
+        min-width:max-content;
+        padding:12px 14px;
+    }
+
+    .nav-item span{
+        display:none;
+    }
+
+    .nav-footer{
+        display:none;
+    }
+
+    /* MAIN */
+    .main-content{
+        padding:14px;
+        overflow-x:hidden;
+    }
+
+    .content-header{
+        flex-direction:row;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:10px;
+    }
+
+    .header-info{
+        flex:1;
+        min-width:0;
+    }
+
+    .header-info h1{
+        font-size:1rem;
+        line-height:1.3;
+    }
+
+    .po-badge-premium{
+        width:auto;
+        min-width:auto;
+        padding:8px 12px;
+        border-radius:12px;
+        gap:8px;
+        flex-shrink:0;
+        margin-left:auto;
+    }
+
+    .badge-icon{
+        padding:6px;
+        border-radius:8px;
+    }
+
+    .badge-icon svg{
+        width:14px;
+        height:14px;
+    }
+
+    .badge-value{
+        font-size:12px;
+        font-weight:700;
+    }
+
+    .glass-card{
+        padding:16px;
+        border-radius:18px;
+    }
+
+    .form-block{
+        margin-bottom:28px;
+    }
+
+    .block-header{
+        flex-direction:column;
+        align-items:flex-start;
+    }
+
+    /* GRID */
+    .vendor-search-grid,
+    .read-only-fields,
+    .modal-grid{
+        grid-template-columns:1fr;
+    }
+
+    .modal-grid .full{
+        grid-column:span 1;
+    }
+
+    /* ITEMS */
+    .items-thead{
+        display:none;
+    }
+
+    .items-table-wrapper{
+        overflow:visible;
+    }
+
+    .item-row{
+        grid-template-columns:1fr;
+        gap:12px;
+        padding:14px;
+        border:1px solid #e2e8f0;
+    }
+
+    .del-btn{
+        width:100%;
+        margin-top:5px;
+    }
+
+    /* FOOTER */
+    .form-footer{
+        gap:20px;
+    }
+
+    .summary-panel{
+        padding:18px;
+        border-radius:24px;
+    }
+
+    .summary-value{
+        font-size:24px;
+    }
+
+    .grand-total-value{
+        font-size:28px;
+    }
+
+    .gst-box{
+        flex-direction:column;
+        align-items:flex-start;
+    }
+
+    .gst-select{
+        width:100%;
+    }
+
+    .btn-generate{
+        max-width:100%;
+        height:56px;
+        font-size:15px;
+    }
+
+    /* RECORD TABLE */
+    .table-container{
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+    }
+
+    .premium-table{
+        min-width:760px;
+    }
+
+    .list-tools{
+        flex-direction:column;
+        align-items:stretch;
+        gap:14px;
+    }
+
+    .search-filter,
+    .list-tools .search-filter{
+        width:100%;
+        min-width:100%;
+    }
+
+    /* MODAL */
+    .modal-content{
+        width:100%;
+        max-width:100%;
+        border-radius:18px;
+        padding:18px;
+        margin:12px;
+    }
+
+    .modal-actions{
+        flex-direction:column;
+    }
+
+    /* LOADER */
+    .loader-text{
+        font-size:16px;
+        text-align:center;
+    }
+
+    
+}
+
+
+/* EXTRA SMALL DEVICES */
+@media (max-width: 480px){
+
+    .main-content{
+        padding:10px;
+    }
+
+    .glass-card{
+        padding:14px;
+    }
+
+    .header-info h1{
+        font-size:1.05rem;
+    }
+
+    input,
+    select,
+    textarea{
+        font-size:14px;
+        padding:11px 12px;
+    }
+
+    .btn-add-row,
+    .btn-add-vendor{
+        font-size:14px;
+    }
+
+    .summary-value{
+        font-size:22px;
+    }
+
+    .grand-total-value{
+        font-size:24px;
+    }
+
+    .gst-left span:first-child{
+        font-size:14px;
+    }
+
+    .gst-value{
+        font-size:18px;
+    }
+
+    .btn-generate{
+        height:52px;
+        border-radius:16px;
+    }
+
+    #receivingSection .table-container::-webkit-scrollbar{
+    height:8px;
+    }
+
+    #receivingSection .table-container::-webkit-scrollbar-thumb{
+        background:#cbd5e1;
+        border-radius:20px;
+    }
+}
+
+/* =========================================
+   FORCE TOP SIDEBAR IN PHONE LANDSCAPE
+========================================= */
+
+@media screen and (max-height: 500px) and (orientation: landscape){
+
+    .app-container{
+        flex-direction:column !important;
+    }
+
+    .side-nav{
+        width:100% !important;
+        height:auto !important;
+        flex-direction:row !important;
+        align-items:center !important;
+        justify-content:space-between !important;
+        padding:12px 14px !important;
+        gap:12px;
+        position:sticky;
+        top:0;
+        left:0;
+        z-index:999;
+    }
+
+    .logo-area{
+        margin-bottom:0 !important;
+    }
+
+    .logo-text{
+        display:none !important;
+    }
+
+    .nav-links{
+        display:flex !important;
+        flex-direction:row !important;
+        gap:8px;
+        flex:1;
+        overflow-x:auto;
+    }
+
+    .nav-item{
+        margin-bottom:0 !important;
+        min-width:max-content;
+        padding:10px 14px !important;
+    }
+
+    .nav-item span{
+        display:none !important;
+    }
+
+    .nav-footer{
+        display:none !important;
+    }
+
+    .main-content{
+        width:100%;
+    }
 }
