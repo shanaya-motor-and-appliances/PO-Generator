@@ -78,6 +78,8 @@ function updateDate(v) {
 // ================= ON LOAD =================
 window.onload = async () => {
 
+
+
   showLoader();
   setTodayDate();
 
@@ -91,6 +93,7 @@ window.onload = async () => {
     itemMasterList   = data.itemList || [];
     window.poListData = data.poList || []; // cache
     window.receivingListData =data.receivingList || [];
+    window.historyListData = data.historyList || [];
 
     // 🔥 PO NUMBER
     const poRes = await fetch(`${SCRIPT_URL}?action=getPONumber`);
@@ -266,6 +269,7 @@ function addItem() {
         suggestionBox.classList.add("hidden");
 
         rateInput.value = item.rate || "";
+        row.querySelector(".item-note").value = item.note || "";
 
         calc();
       });
@@ -339,11 +343,6 @@ function calc() {
 // ================= SAVE + PDF =================
 async function generatePO(){
 
-  if(vendorLoading){
-    alert("Please wait, vendor details loading...");
-    return;
-  }
-
   if(!selectedVendor){
     alert("Please select Vendor");
     return;
@@ -354,56 +353,6 @@ async function generatePO(){
     alert("Add at least one item");
     return;
   }
-
-  // 🔥 Open tab immediately (popup safe)
-  const pdfTab = window.open("", "_blank");
-
-  if(!pdfTab){
-    alert("Popup blocked. Please allow popups for this site.");
-    return;
-  }
-
-  // 🔥 Loader UI inside new tab
-  pdfTab.document.write(`
-    <html>
-      <head>
-        <title>Generating PO</title>
-        <style>
-          body{
-            margin:0;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            height:100vh;
-            font-family: Inter, Arial, sans-serif;
-            background:#f4f6f9;
-            flex-direction:column;
-          }
-          .spinner{
-            width:60px;
-            height:60px;
-            border:6px solid #e0e0e0;
-            border-top:6px solid #2f80ed;
-            border-radius:50%;
-            animation:spin 1s linear infinite;
-            margin-bottom:20px;
-          }
-          @keyframes spin{
-            0%{ transform:rotate(0deg); }
-            100%{ transform:rotate(360deg); }
-          }
-          h2{
-            font-weight:600;
-            color:#333;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="spinner"></div>
-        <h2>Generating PO. Please Wait...</h2>
-      </body>
-    </html>
-  `);
 
   const btn = document.getElementById("saveBtn");
   btn.disabled = true;
@@ -456,29 +405,37 @@ async function generatePO(){
       throw new Error(result.error || "Save failed");
     }
 
-    // 🔥 PDF open
-    await openPDFWithRetry(result.pdfUrl, pdfTab);
+    // 🔥 UPDATE LOCAL CACHE
+    window.poListData.unshift({
+      po: payload.po,
+      date: payload.date,
+      party: payload.party,
+      total: payload.total,
+      note: payload.commonNote,
+      items: JSON.stringify(payload.items),
+      pdf: result.pdfUrl,
+      status: "ACTIVE"
+    });
+
+    // 🔥 REFRESH RECORD TABLE
+    renderPOList(window.poListData);
+
+    // 🔥 OPEN INSIDE APP
+    openPDFModal(
+      result.pdfUrl,
+      payload.po,
+      true
+    );
 
     // 🔥 reset edit mode
     editMode = false;
     editingPO = "";
-
-    // 🔥 reload
-    setTimeout(() => {
-      if(pdfTab && !pdfTab.closed){
-        window.location.reload();
-      }
-    }, 3000);
 
     const btn = document.getElementById("saveBtn");
     btn.textContent = "Generate & Save";
     btn.style.background = "";
 
   }catch(err){
-
-    if(pdfTab && !pdfTab.closed){
-      pdfTab.close();
-    }
 
     alert("Error: " + err.message);
 
@@ -489,32 +446,6 @@ async function generatePO(){
     btn.disabled = false;
   }
 }
-
-async function openPDFWithRetry(url, tab){
-
-  let attempts = 0;
-  const maxAttempts = 10;
-
-  while(attempts < maxAttempts){
-
-    try{
-      const res = await fetch(url, { method: "HEAD" });
-
-      if(res.ok){
-        tab.location.href = url;
-        return;
-      }
-
-    }catch(e){}
-
-    await new Promise(r => setTimeout(r, 800));
-    attempts++;
-  }
-
-  // fallback (force open)
-  tab.location.href = url;
-}
-
 
 function openVendorModal(){
   document.getElementById("vendorModal").classList.remove("hidden");
@@ -676,8 +607,6 @@ partySearch.addEventListener("input", () => {
 
 });
 
-let vendorLoading = false;
-
 let lastSheetState = null;
 
 async function checkSheetUpdate(){
@@ -690,7 +619,18 @@ async function checkSheetUpdate(){
       return;
     }
 
-    if(data.time !== lastSheetState){
+    if(
+      data.time !== lastSheetState &&
+      !document.getElementById("pdfModal")
+        .classList.contains("hidden")
+    ){
+      return;
+    }
+
+    if(
+      data.time !== lastSheetState &&
+      sessionStorage.getItem("activePage") !== "create"
+    ){
       location.reload();
     }
 
@@ -722,7 +662,7 @@ function showList(btn){
   document.getElementById("settingsSection")
     .classList.add("hidden");
 
-  setTimeout(loadPOList, 0);
+  loadPOList();
 }
 
 function showCreate(btn){
@@ -771,10 +711,12 @@ function viewPDF(po){
     return;
   }
 
-  openPDFModal(data.pdf, po);
+  openPDFModal( data.pdf, po, false);
 }
 
-function openPDFModal(url, title = "PDF Viewer"){
+
+
+function openPDFModal(url, title = "PDF Viewer", shouldReload = false){
 
   const modal =
     document.getElementById("pdfModal");
@@ -817,6 +759,9 @@ function openPDFModal(url, title = "PDF Viewer"){
 
   titleEl.textContent = title;
 
+  window.shouldReloadAfterPDFClose =
+  shouldReload;
+
   modal.classList.remove("hidden");
 
   document.body.style.overflow = "hidden";
@@ -833,7 +778,16 @@ function closePDFModal(){
     .src = "";
 
   document.body.style.overflow = "";
+
+  // 🔥 RELOAD ONLY AFTER NEW PO
+  if(window.shouldReloadAfterPDFClose){
+
+    window.shouldReloadAfterPDFClose = false;
+
+    location.reload();
+  }
 }
+
 
 async function cancelPO(po){
 
@@ -1169,6 +1123,7 @@ function showReceiving(btn){
         .classList.add("hidden");
 
     loadReceivingList();
+    switchReceivingTab("pending");
 }
 
 function loadReceivingList(){
@@ -1179,41 +1134,40 @@ function loadReceivingList(){
     renderReceivingTable();
 }
 
+function handleReceivingSearch(){
+
+    if(activeReceivingTab === "pending"){
+
+        filterReceivingTable();
+
+    }else{
+
+        filterHistoryTable();
+    }
+}
+
 function filterReceivingTable(){
 
-    const value = document
-        .getElementById("receivingSearch")
+    const value =
+        document.getElementById("receivingSearch")
         .value
         .toLowerCase()
         .trim();
 
-    const body = document.getElementById(
-        "receivingTableBody"
-    );
-
-    const rows = body.querySelectorAll("tr");
+    const rows =
+        document.querySelectorAll(
+            "#receivingTableBody tr"
+        );
 
     rows.forEach(row => {
 
-        const po = row.children[0]
-            .textContent
-            .toLowerCase();
-
-        const vendor = row.children[1]
-            .textContent
-            .toLowerCase();
-
-        const item = row.children[3]
-            .textContent
-            .toLowerCase();
-
-        const match =
-            po.includes(value) ||
-            vendor.includes(value) ||
-            item.includes(value);
+        const text =
+            row.innerText.toLowerCase();
 
         row.style.display =
-            match ? "" : "none";
+            text.includes(value)
+            ? ""
+            : "none";
     });
 }
 
@@ -1376,6 +1330,8 @@ function openReceivingModal(data){
     document.getElementById("r_newqty").value = "";
 
     document.getElementById("r_invoice").value = "";
+
+    document.getElementById("r_invoice_number").value = "";
 }
 
 function closeReceivingModal(){
@@ -1390,11 +1346,21 @@ async function saveReceiving(){
         document.getElementById("r_newqty").value
     );
 
+    const invoiceNumber =
+        document.getElementById("r_invoice_number")
+        .value
+        .trim();
+
     const invoiceDate =
         document.getElementById("r_invoice").value;
 
     if(!qty || qty <= 0){
         alert("Enter valid quantity");
+        return;
+    }
+
+    if(!invoiceNumber){
+        alert("Enter invoice number");
         return;
     }
 
@@ -1418,16 +1384,17 @@ async function saveReceiving(){
 
     try{
 
-        const payload = {
-            po: currentReceiving.po,
-            vendor: currentReceiving.vendor,
-            poDate: currentReceiving.poDate,
-            item: currentReceiving.item,
-            poQty: currentReceiving.poQty,
-            receivedQty: qty,
-            totalReceived: currentReceiving.received,
-            invoiceDate: invoiceDate
-        };
+      const payload = {
+          po: currentReceiving.po,
+          vendor: currentReceiving.vendor,
+          poDate: currentReceiving.poDate,
+          item: currentReceiving.item,
+          poQty: currentReceiving.poQty,
+          receivedQty: qty,
+          totalReceived: currentReceiving.received,
+          invoiceNumber: invoiceNumber,
+          invoiceDate: invoiceDate
+      };
 
         const formData = new FormData();
 
@@ -1476,17 +1443,6 @@ async function saveReceiving(){
     }
 }
 
-
-let receivingRowData = [];
-
-function openReceivingModalByIndex(index){
-
-    const data = receivingRowData[index];
-
-    if(!data) return;
-
-    openReceivingModal(data);
-}
 
 const vendorLoaderText =
 document.getElementById("vendorLoaderText");
@@ -1773,4 +1729,151 @@ function closeVendorProfile(){
     ).classList.add("hidden");
 
     document.body.style.overflow = "";
+}
+
+function loadHistoryTable(){
+
+    renderHistoryTable(
+        window.historyListData || []
+    );
+}
+
+function renderHistoryTable(data){
+
+    const tbody =
+        document.getElementById("historyTableBody");
+
+    tbody.innerHTML = "";
+
+    if(data.length === 0){
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align:center;">
+                    No History Found
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
+    data.forEach(row => {
+
+        tbody.innerHTML += `
+            <tr>
+                <td>${row.po}</td>
+                <td>${row.vendor}</td>
+                <td>${formatDisplayDate(row.poDate)}</td>
+                <td>${row.item}</td>
+                <td>${row.invoice}</td>
+                <td>${formatDisplayDate(row.invoiceDate)}</td>
+                <td>${row.qty}</td>
+            </tr>
+        `;
+    });
+}
+
+function filterHistoryTable(){
+
+    const value =
+        document.getElementById("receivingSearch")
+        .value
+        .toLowerCase()
+        .trim();
+
+    const filtered =
+        (window.historyListData || []).filter(r =>
+
+            (r.po || "")
+            .toLowerCase()
+            .includes(value)
+
+            ||
+
+            (r.vendor || "")
+            .toLowerCase()
+            .includes(value)
+
+            ||
+
+            (r.item || "")
+            .toLowerCase()
+            .includes(value)
+
+            ||
+
+            (r.invoice || "")
+            .toLowerCase()
+            .includes(value)
+        );
+
+    renderHistoryTable(filtered);
+}
+
+function formatDisplayDate(dateValue){
+
+    if(!dateValue) return "";
+
+    const d = new Date(dateValue);
+
+    if(isNaN(d)) return dateValue;
+
+    const day =
+        String(d.getDate()).padStart(2, "0");
+
+    const month =
+        String(d.getMonth() + 1).padStart(2, "0");
+
+    const year =
+        d.getFullYear();
+
+    return `${day}/${month}/${year}`;
+}
+
+let activeReceivingTab = "pending";
+
+function switchReceivingTab(type){
+
+    activeReceivingTab = type;
+
+    const pendingBtn =
+        document.getElementById("receivingPendingTab");
+
+    const historyBtn =
+        document.getElementById("receivingHistoryTab");
+
+    const pendingWrap =
+        document.getElementById("pendingReceivingWrapper");
+
+    const historyWrap =
+        document.getElementById("historyReceivingWrapper");
+
+    // RESET
+    pendingBtn.classList.remove("active");
+    historyBtn.classList.remove("active");
+
+    pendingWrap.classList.add("hidden");
+    historyWrap.classList.add("hidden");
+
+    // ACTIVE
+    if(type === "pending"){
+
+        pendingBtn.classList.add("active");
+
+        pendingWrap.classList.remove("hidden");
+
+    }else{
+
+        historyBtn.classList.add("active");
+
+        historyWrap.classList.remove("hidden");
+
+        loadHistoryTable();
+    }
+
+    // CLEAR SEARCH
+    document.getElementById(
+        "receivingSearch"
+    ).value = "";
 }
