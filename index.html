@@ -8,7 +8,574 @@
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="Fevicon.png">
     <script src="https://unpkg.com/lucide@latest"></script>
+</head><!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PODesk | Shanaya Motor</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
+
+<body>
+
+    <!-- LOADER -->
+    <div id="loader" class="hidden">
+        <div class="loader-card">
+            <div class="loader-animation">
+                <div class="circle">
+                    <div class="dot"></div>
+                    <div class="outline"></div>
+                </div>
+                <div class="circle">
+                    <div class="dot"></div>
+                    <div class="outline"></div>
+                </div>
+                <div class="circle">
+                    <div class="dot"></div>
+                    <div class="outline"></div>
+                </div>
+                <div class="circle">
+                    <div class="dot"></div>
+                    <div class="outline"></div>
+                </div>
+            </div>
+            <div class="loader-text" id="loaderText">
+                Processing...
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Dashboard Sidebar -->
+        <aside class="side-nav">
+            <div class="logo-area">
+                <div class="logo-circle">SM</div>
+                <span class="logo-text">Shanaya <span>Motors</span></span>
+            </div>
+            <nav class="nav-links">
+                <button class="nav-item active" id="nav-create" onclick="showCreate(this)">
+                    <i data-lucide="file-plus"></i> <span>Create PO</span>
+                </button>
+                <button class="nav-item" id="nav-records" onclick="showList(this)">
+                    <i data-lucide="layout-list"></i> <span>Records</span>
+                </button>
+                <button class="nav-item" id="nav-receiving" onclick="showReceiving(this)">
+                    <i data-lucide="truck"></i>
+                    <span>Receiving</span>
+                </button>
+                <!-- <button class="nav-item" id="nav-history" onclick="showHistory(this)">
+                    <i data-lucide="clipboard-list"></i>
+                    <span>Receiving History</span>
+                </button> -->
+                <button class="nav-item" id="nav-settings" onclick="showSettings(this)">
+                    <i data-lucide="settings"></i>
+                    <span>Settings</span>
+                </button>
+            </nav>
+            <div class="nav-footer">
+                <button class="sync-btn" onclick="refreshPage()">
+                    <i data-lucide="refresh-cw"></i> <span>Sync Data</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Content Header -->
+            <header class="content-header">
+                <div class="header-info">
+                    <h1 id="page-title">PODesk || Shanaya Motor</h1>
+                    <div class="breadcrumb">
+                        <span class="dot pulse"></span>
+                        <p class="subtitle">System Active • ></p>
+                    </div>
+                </div>
+                <div class="header-meta">
+                    <div class="po-badge-premium">
+                        <div class="badge-icon"><i data-lucide="hash"></i></div>
+                        <div class="badge-content">
+                            <span id="po-number" class="badge-value"></span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- SECTION: CREATE PO -->
+            <div id="createSection" class="glass-card fade-in">
+                <section class="form-block">
+                    <div class="block-header">
+                        <div class="icon-title">
+                            <i data-lucide="user"></i>
+                            <h3>Vendor Details</h3>
+                        </div>
+                        <div class="date-picker-wrap" onclick="openDatePicker()">
+                            <i data-lucide="calendar"></i>
+                            <span id="po-date-text">Select Date</span>
+                            <input type="date" id="po-date" hidden onchange="updateDate(this.value)">
+                        </div>
+                    </div>
+
+                    <div class="vendor-search-grid">
+                        <div class="search-box-container">
+                            <label class="field-label">Search Master Vendor</label>
+                            <div class="input-with-icon">
+                                <input type="text" id="partySearch" placeholder="Search Here..." autocomplete="off">
+                                <i data-lucide="search"></i>
+                            </div>
+                            <div id="vendorSuggestions" class="suggestions-dropdown hidden"></div>
+                        </div>
+                        <button class="btn-add-vendor" onclick="openVendorModal()">
+                            <i data-lucide="plus"></i> New Vendor
+                        </button>
+                    </div>
+
+                    <div class="read-only-fields">
+                        <div class="field-group"><span>Building</span><input id="building" readonly></div>
+                        <div class="field-group"><span>Street</span><input id="street" readonly></div>
+                        <div class="field-group"><span>State</span><input id="state" readonly></div>
+                        <div class="field-group"><span>PIN</span><input id="pin" readonly></div>
+                        <div class="field-group"><span>Phone</span><input id="phone" readonly></div>
+                        <div class="field-group"><span>GSTIN</span><input id="gst" class="highlight-input" readonly></div>
+                    </div>
+                </section>
+
+                <section class="form-block">
+                    <div class="block-header">
+                        <div class="icon-title">
+                            <i data-lucide="package"></i>
+                            <h3>Item Catalog</h3>
+                        </div>
+                    </div>
+                    <div class="items-table-wrapper">
+                        <div class="items-thead">
+                            <div class="col-desc">Description & Notes</div>
+                            <div class="col-qty">Qty</div>
+                            <div class="col-unit">Unit</div>
+                            <div class="col-rate">Rate</div>
+                            <div class="col-amt">Amount</div>
+                            <div class="col-action"></div>
+                        </div>
+                        <div id="items" class="items-tbody"></div>
+                    </div>
+                    <button class="btn-add-row" onclick="addItem()">
+                        <i data-lucide="plus-circle"></i> Add Line Item
+                    </button>
+                </section>
+
+                <div class="form-footer">
+                    <div class="footer-notes">
+                        <label class="field-label">Purchase Terms & Notes</label>
+                        <textarea id="commonNote" placeholder="Enter delivery terms, instructions..."></textarea>
+                    </div>
+                    <div class="summary-panel">
+                        <!-- SUBTOTAL -->
+                        <div class="summary-box">
+                            <div class="summary-label">Sub Total</div>
+                            <div class="summary-value">₹<span id="sub-total">0.00</span></div>
+                        </div>
+
+                        <!-- GST -->
+                        <div class="gst-box">
+                            <div class="gst-left">
+                                <span>GST</span>
+                                <div class="gst-value">₹<span id="gst-amt">0.00</span></div>
+                            </div>
+                            <select id="gstRate" onchange="calc()" class="gst-select">
+                                <option value="0.00">0%</option>
+                                <option value="0.05">5%</option>
+                                <option value="0.18" selected>18%</option>
+                                <option value="0.28">28%</option>
+                            </select>
+                        </div>
+
+                        <!-- GRAND TOTAL -->
+                        <div class="grand-total-box">
+                            <div class="grand-total-label">Grand Total</div>
+                            <div class="grand-total-value">₹<span id="total">0.00</span></div>
+                        </div>
+
+                        <!-- BUTTON -->
+                        <button id="saveBtn" class="btn-generate" onclick="generatePO()">
+                            <i data-lucide="file-check"></i> Generate & Save PO
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: RECORDS -->
+            <div id="poListSection" class="glass-card fade-in hidden">
+                <div class="list-tools">
+                    <h3>Purchase Order Record</h3>
+                    <div class="search-filter">
+                        <input type="text" id="poSearch" placeholder="Search Here..." oninput="filterPOList()">
+                        <i data-lucide="search"></i>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="premium-table">
+                        <thead>
+                            <tr>
+                                <th>PO Number</th>
+                                <th>Date</th>
+                                <th>Vendor Name</th>
+                                <th>Amount</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="poTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SECTION: RECEIVING -->
+            <div id="receivingSection" class="glass-card fade-in hidden">
+
+                <!-- TOP HEADER -->
+                <div class="receiving-topbar">
+
+                    <div class="receiving-tabs">
+
+                        <button
+                            class="receiving-tab active"
+                            id="receivingPendingTab"
+                            onclick="switchReceivingTab('pending')"
+                        >
+                            Pending Receiving
+                        </button>
+
+                        <button
+                            class="receiving-tab"
+                            id="receivingHistoryTab"
+                            onclick="switchReceivingTab('history')"
+                        >
+                            Receiving History
+                        </button>
+
+                    </div>
+
+                    <div class="search-filter">
+                        <input
+                            type="text"
+                            id="receivingSearch"
+                            placeholder="Search Here..."
+                            oninput="handleReceivingSearch()"
+                        >
+                        <i data-lucide="search"></i>
+                    </div>
+
+                </div>
+
+                <!-- ================= PENDING ================= -->
+                <div id="pendingReceivingWrapper">
+
+                    <div class="table-container">
+
+                        <table class="premium-table">
+
+                            <thead>
+                                <tr>
+                                    <th>PO Number</th>
+                                    <th>Vendor Name</th>
+                                    <th>PO Date</th>
+                                    <th>Item Name</th>
+                                    <th>PO Qty</th>
+                                    <th>Received Qty</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="receivingTableBody"></tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+                <!-- ================= HISTORY ================= -->
+                <div id="historyReceivingWrapper" class="hidden">
+
+                    <div class="table-container">
+
+                        <table class="premium-table history-table">
+
+                            <thead>
+                                <tr>
+                                    <th>PO Number</th>
+                                    <th>Vendor Name</th>
+                                    <th>PO Date</th>
+                                    <th>Item Name</th>
+                                    <th>Invoice Number</th>
+                                    <th>Invoice Date</th>
+                                    <th>Received Qty</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="historyTableBody"></tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- SECTION: SETTINGS -->
+            <div id="settingsSection"
+                 class="glass-card fade-in hidden">
+
+                <div class="list-tools">
+
+                    <h3>Vendor Settings</h3>
+
+                    <div class="search-filter">
+                        <input
+                            type="text"
+                            id="vendorSettingsSearch"
+                            placeholder="Search Vendor..."
+                            oninput="filterVendorSettings()"
+                        >
+                        <i data-lucide="search"></i>
+                    </div>
+
+                </div>
+
+                <div class="table-container">
+
+                    <table class="premium-table">
+
+                        <thead>
+                            <tr>
+                                <th>Vendor Name</th>
+                                <th>Contact Person</th>
+                                <th>Phone</th>
+                                <th>GSTIN</th>
+                                <th>State</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="vendorSettingsBody"></tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- VENDOR MODAL -->
+    <div id="vendorModal" class="modal-overlay hidden">
+        <div id="vendorLoader" class="hidden">
+            <div class="loader-card">
+                <div class="loader-animation">
+                    <div class="circle"><div class="dot"></div><div class="outline"></div></div>
+                    <div class="circle"><div class="dot"></div><div class="outline"></div></div>
+                    <div class="circle"><div class="dot"></div><div class="outline"></div></div>
+                    <div class="circle"><div class="dot"></div><div class="outline"></div></div>
+                </div>
+                <div class="loader-text" id="vendorLoaderText">Saving Vendor...</div>
+            </div>
+        </div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-divider"></div>
+                <h2>Add Master Vendor</h2>
+                <button class="btn-close" onclick="closeVendorModal()">&times;</button>
+            </div>
+            <div class="modal-grid">
+                <div class="field-group"><span>Vendor Name</span><input id="v_name"></div>
+                <div class="field-group"><span>Contact Person</span><input id="v_person"></div>
+                <div class="field-group"><span>Building</span><input id="v_building"></div>
+                <div class="field-group"><span>Street</span><input id="v_street"></div>
+                <div class="field-group"><span>State</span><input id="v_state"></div>
+                <div class="field-group"><span>Pin</span><input id="v_pin"></div>
+                <div class="field-group"><span>Phone</span><input id="v_phone"></div>
+                <div class="field-group"><span>GSTIN</span><input id="v_gst"></div>
+                <div class="field-group full"><span>Payment Terms</span><input id="v_terms"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-save" onclick="saveVendor()">Save Vendor</button>
+                <button class="btn-cancel" onclick="closeVendorModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RECEIVING MODAL -->
+    <div id="receivingModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Receive Material</h2>
+                <button class="btn-close" onclick="closeReceivingModal()">&times;</button>
+            </div>
+            <div class="modal-grid">
+                <div class="field-group"><span>PO Number</span><input id="r_po" readonly></div>
+                <div class="field-group"><span>Item Name</span><input id="r_item" readonly></div>
+                <div class="field-group"><span>PO Qty</span><input id="r_poqty" readonly></div>
+                <div class="field-group"><span>Already Received</span><input id="r_received" readonly></div>
+                <div class="field-group"><span>Pending Qty</span><input id="r_pending" readonly></div>
+                <div class="field-group"><span>New Received Qty</span><input id="r_newqty" type="number"></div>
+                <div class="field-group"><span>Invoice Number</span><input type="text" id="r_invoice_number" placeholder="Enter Invoice Number"></div>
+                <div class="field-group"><span>Invoice Date</span><input type="date" id="r_invoice"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-save" onclick="saveReceiving()">Save Receiving</button>
+                <button class="btn-cancel" onclick="closeReceivingModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+    <!-- PDF VIEWER MODAL -->
+    <div id="pdfModal" class="pdf-modal hidden">
+
+        <div class="pdf-modal-box">
+
+            <!-- HEADER -->
+            <div class="pdf-modal-header">
+
+                <div class="pdf-title-wrap">
+
+                    <span class="pdf-title" id="pdfTitle">
+                        PDF Viewer
+                    </span>
+
+                </div>
+
+                <div class="pdf-actions">
+
+                    <!-- DOWNLOAD -->
+                    <a id="pdfDownloadBtn"
+                       class="pdf-icon-btn"
+                       target="_blank"
+                       download>
+
+                        <i data-lucide="download"></i>
+
+                    </a>
+
+                    <!-- CLOSE -->
+                    <button
+                        class="pdf-close-btn"
+                        onclick="closePDFModal()"
+                    >
+                        ✕
+                    </button>
+
+                </div>
+
+            </div>
+
+            <!-- BODY -->
+            <div class="pdf-frame-wrap">
+
+                <iframe id="pdfFrame" class="pdf-frame"></iframe>
+
+            </div>
+
+        </div>
+
+    </div>
+    <!-- VENDOR PROFILE MODAL -->
+    <div id="vendorProfileModal"
+        class="vendor-profile-overlay hidden">
+
+        <div class="vendor-profile-card">
+
+            <!-- CLOSE -->
+            <button class="vendor-profile-close"
+                    onclick="closeVendorProfile()">
+                ✕
+            </button>
+
+            <button
+                class="vendor-edit-float"
+                onclick="editVendorProfile()"
+                title="Edit Vendor"
+            >
+                <i data-lucide="square-pen"></i>
+            </button>
+
+            <!-- HEADER -->
+            <div class="vendor-profile-header">
+
+                <div class="vendor-avatar"
+                    id="vendorAvatar">
+                    A
+                </div>
+
+                <h2 id="vendorProfileName">
+                    Vendor Name
+                </h2>
+
+            </div>
+
+            <!-- DETAILS -->
+            <div class="vendor-profile-grid">
+
+                <div class="vendor-detail-box">
+                    <label>Vendor Address</label>
+                    <p id="vp_address">-</p>
+                </div>
+
+                <div class="vendor-detail-box">
+                    <label>GSTIN</label>
+                    <p id="vp_gst">-</p>
+                </div>
+
+                <div class="vendor-detail-box">
+                    <label>Contact Number</label>
+                    <p id="vp_phone">-</p>
+                </div>
+
+                <div class="vendor-detail-box">
+                    <label>Contact Person</label>
+                    <p id="vp_person">-</p>
+                </div>
+
+                <div class="vendor-detail-box">
+                    <label>Payment Terms</label>
+                    <p id="vp_terms">-</p>
+                </div>
+
+                <div class="vendor-detail-box">
+                    <label>Total POs</label>
+                    <p id="vp_total_po">0</p>
+                </div>
+
+            </div>
+
+            <!-- MATERIALS -->
+            <div class="vendor-materials-section">
+
+                <h3>Materials Supplied</h3>
+
+                <div id="vendorMaterials"
+                    class="vendor-materials-wrap">
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        window.addEventListener("load", () => {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        });
+    </script>
+</body>
+
+</html>
 
 <body>
 
