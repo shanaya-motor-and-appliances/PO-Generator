@@ -187,6 +187,8 @@ function addItem() {
       <option value="SET">SET</option>
       <option value="NO">NO</option>
       <option value="LTR">LTR</option>
+      <option value="MTR">MTR</option>
+      <option value="PKT">PKT</option>
     </select>
 
     <input class="rate" type="number" placeholder="Rate" oninput="calc()">
